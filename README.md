@@ -1,64 +1,284 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Terraform Provider for Nobus Cloud
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+A Terraform provider for [Nobus Cloud](https://cloud.nobus.io), built on the
+public Nobus API (`https://cloud-api.nobus.io/api/v3`).
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
+Every endpoint, request field, response field and validation in this provider is
+derived from the Nobus OpenAPI specification, which is vendored at
+[`docs/api/openapi.json`](docs/api/openapi.json). Nothing is inferred from other
+cloud providers.
 
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
+## Resources
 
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
-
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+| Terraform resource | Purpose |
+| --- | --- |
+| `nobus_network` | A network, created together with its subnet and router |
+| `nobus_volume` | A volume that can be grown in place |
+| `nobus_instance` | A virtual machine instance |
+| `nobus_volume_attachment` | Attaches a volume to an instance |
+| `nobus_keypair` | An SSH keypair for instances |
+| `nobus_subnet` | A standalone network subnet |
+| `nobus_router` | A standalone network router |
+| `nobus_router_interface` | Connects a router to a subnet or port |
+| `nobus_port` | A network port |
+| `nobus_floating_ip` | A floating IP allocation and optional port association |
+| `nobus_security_group` | A network security group |
+| `nobus_security_group_rule` | A security-group ingress or egress rule |
+| `nobus_instance_action` | Runs a one-shot compute operation |
 
 ## Requirements
 
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.24
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) 1.0 or later
+- [Go](https://go.dev/doc/install) 1.25 or later (only for building the provider)
+- A Nobus Cloud account, an API key and a project
 
-## Building the Provider
+## Authentication
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
+The Nobus API authenticates with a bearer token. Generate an API key from the
+Nobus API key endpoint (`POST /api/v3/auth/api-key`) and supply it either
+through the provider block or through the environment.
 
-```shell
-go install
+```hcl
+terraform {
+  required_providers {
+    nobus = {
+      source = "nobus-cloud/nobus"
+    }
+  }
+}
+
+provider "nobus" {
+  api_key = var.nobus_api_key
+}
 ```
 
-## Adding Dependencies
+```bash
+export NOBUS_API_KEY="..."
+```
 
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
+Every provider attribute can be supplied either way:
 
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
+| Attribute | Environment variable | Default |
+| --- | --- | --- |
+| `api_key` | `NOBUS_API_KEY` | none, required |
+| `endpoint` | `NOBUS_ENDPOINT` | `https://cloud-api.nobus.io` |
+| `project_id` | `NOBUS_PROJECT_ID` | none, required on resources |
+| `availability_zone` | `NOBUS_AVAILABILITY_ZONE` | `nobus-wa-az1` |
 
-```shell
-go get github.com/author/dependency
+The API key is marked sensitive. It is never written to state and never appears
+in diagnostics or error messages.
+
+## Provider configuration
+
+```hcl
+provider "nobus" {
+  api_key           = var.nobus_api_key
+  project_id        = var.nobus_project_id # default for every resource
+  availability_zone = "nobus-wa-az1"
+}
+```
+
+`project_id` and `availability_zone` are required by every Nobus API operation.
+Setting them once on the provider avoids repeating them on each resource.
+
+## Examples
+
+### Network
+
+The Nobus API creates a network, a subnet and a router in a single call, so a
+network needs a subnet CIDR and a router name.
+
+```hcl
+resource "nobus_network" "private" {
+  name        = "production-network"
+  subnet_cidr = "10.20.0.0/24"
+  router_name = "production-router"
+
+  description = "Primary private network"
+  tags        = ["environment=production"]
+}
+
+output "subnet_id" {
+  value = nobus_network.private.subnet_id
+}
+```
+
+### Volume
+
+```hcl
+resource "nobus_volume" "data" {
+  name = "production-data"
+  size = 100
+
+  metadata = {
+    environment = "production"
+  }
+}
+```
+
+Increasing `size` grows the volume in place through the Nobus extend operation.
+Volumes cannot be shrunk; the provider reports a clear error if the
+configuration asks for a smaller size.
+
+### Instance
+
+The API requires an image, a flavor and a key name.
+
+```hcl
+resource "nobus_instance" "web" {
+  name     = "web-01"
+  image    = "ubuntu-22-04"
+  flavor   = "small"
+  key_name = "operations"
+}
+```
+
+### Referencing a network from an instance
+
+Terraform builds the dependency graph from the reference, so the instance is
+created after the network exists and no explicit `depends_on` is needed.
+
+```hcl
+resource "nobus_network" "app" {
+  name        = "app-network"
+  subnet_cidr = "10.30.0.0/24"
+  router_name = "app-router"
+}
+
+resource "nobus_instance" "api" {
+  name    = "api-01"
+  image   = "ubuntu-22-04"
+  flavor  = "medium"
+  key_name = "operations"
+
+  network_id = nobus_network.app.id
+}
+```
+
+More examples live in [`examples/`](examples).
+
+## Asynchronous resources
+
+Volume creation, instance creation, volume growth and all deletions are
+asynchronous. The provider polls the status the API reports until the resource
+reaches the expected state, an unrecoverable error state, or Terraform cancels
+the operation.
+
+`InstanceSchema.status` has no enum in the Nobus specification, so the accepted
+ready states default to `ACTIVE` and `active`. If your deployment reports
+something else, set `instance_ready_states`.
+
+## Importing existing resources
+
+Every resource supports `terraform import` using its Nobus ID. The project and
+availability zone come from the provider configuration, because every Nobus read
+requires them.
+
+```bash
+terraform import nobus_network.production NETWORK_ID
+terraform import nobus_volume.data      VOLUME_ID
+terraform import nobus_instance.web      INSTANCE_ID
+terraform import nobus_volume_attachment.database INSTANCE_ID/VOLUME_ID
+```
+
+## Error handling
+
+API failures become Terraform diagnostics that preserve what Nobus returned:
+
+```
+Error: Unable to create Nobus instance "api-01"
+
+  with nobus_instance.api,
+  on main.tf line 2, in resource "nobus_instance" "api":
+   2: resource "nobus_instance" "api" {
+
+The Nobus API returned HTTP 400: requested image is unavailable in the selected
+availability zone.
+```
+
+## Local development
+
+```bash
 go mod tidy
+go fmt ./...
+go vet ./...
+go test ./...
+go build
 ```
 
-Then commit the changes to `go.mod` and `go.sum`.
+The unit tests use `httptest` servers, so they need no Nobus infrastructure and
+no credentials. They cover request construction, authentication, response
+decoding, error decoding, state mapping and the full create/read/update/delete
+lifecycle of each resource against a fake API.
 
-## Using the Provider
+### Acceptance tests
 
-Fill this in for each provider
+Acceptance tests talk to the real API and only run when `TF_ACC` is set:
 
-## Developing the Provider
+```bash
+export NOBUS_API_KEY="..."
+export NOBUS_PROJECT_ID="..."
+export NOBUS_TEST_IMAGE="ubuntu-22-04"
+export NOBUS_TEST_FLAVOR="small"
+export NOBUS_TEST_KEY_NAME="operations"
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
-
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-To generate or update documentation, run `make generate`.
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```shell
-make testacc
+TF_ACC=1 go test ./internal/provider/ -run TestAcc -v -timeout 120m
 ```
+
+### Using the local build with Terraform
+
+Build the provider and point Terraform at the binary with a development
+override. Create `~/.terraformrc`:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "nobus-cloud/nobus" = "/absolute/path/to/your/GOBIN"
+  }
+
+  # Keep this so providers from the registry still work for other
+  # configurations. Remove it to use only local builds.
+  direct {}
+}
+```
+
+Then build and run Terraform:
+
+```bash
+go install .
+
+# In your Terraform configuration directory:
+terraform init   # warns that the dev override is in effect
+terraform plan
+terraform apply
+```
+
+With a development override in place, `terraform init` prints a warning and
+skips downloading the provider. Skip `init` on subsequent runs.
+
+## Project layout
+
+```text
+terraform-provider-nobus/
+├── main.go
+├── internal/
+│   ├── client/         # Nobus API client, no Terraform dependencies
+│   │   ├── client.go   # transport, auth, JSON, polling
+│   │   ├── errors.go   # error types and not-found detection
+│   │   ├── networks.go
+│   │   ├── volumes.go
+│   │   └── instances.go
+│   └── provider/       # Terraform Plugin Framework layer
+│       ├── provider.go
+│       ├── configure.go
+│       ├── network_resource.go
+│       ├── volume_resource.go
+│       ├── instance_resource.go
+│       └── volume_attachment_resource.go
+├── examples/
+├── docs/
+└── docs/api/openapi.json
+```
+
+The API client contains no Terraform-specific code, so it can be reused and
+tested on its own. The resources contain no raw HTTP logic.

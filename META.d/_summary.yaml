@@ -4,7 +4,7 @@ schema: 1.1
 partition: tf-ecosystem
 
 summary:
-  owner: team-tf-core-plugins
+  owner: nobus-cloud
   description: |
-    Quick start repository for creating a Terraform provider using terraform-plugin-framework
+    Terraform provider for Nobus Cloud, built on the public Nobus API.
   visibility: public

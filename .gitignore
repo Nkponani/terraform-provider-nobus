@@ -16,6 +16,8 @@ website/node_modules
 *.backup
 ./*.tfstate
 .terraform/
+examples/tests/**/.terraform.lock.hcl
+examples/tests/**/terraformrc.hcl
 *.log
 *.bak
 *~
