@@ -293,7 +293,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -438,7 +438,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -479,7 +479,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -562,7 +562,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}

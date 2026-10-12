@@ -341,7 +341,7 @@ func TestResolveScope(t *testing.T) {
 
 	t.Run("falls back to the provider defaults", func(t *testing.T) {
 		var diags diag.Diagnostics
-		resolved, ok := config.resolveScope(types.StringNull(), types.StringNull(), &diags)
+		resolved, ok := config.ResolveScope(types.StringNull(), types.StringNull(), &diags)
 		if !ok {
 			t.Fatal("expected the scope to resolve")
 		}
@@ -355,7 +355,7 @@ func TestResolveScope(t *testing.T) {
 
 	t.Run("resource values win over the provider defaults", func(t *testing.T) {
 		var diags diag.Diagnostics
-		resolved, ok := config.resolveScope(types.StringValue("p-9"), types.StringValue("az-9"), &diags)
+		resolved, ok := config.ResolveScope(types.StringValue("p-9"), types.StringValue("az-9"), &diags)
 		if !ok {
 			t.Fatal("expected the scope to resolve")
 		}
@@ -367,7 +367,7 @@ func TestResolveScope(t *testing.T) {
 	t.Run("reports a missing project", func(t *testing.T) {
 		empty := &providerConfig{}
 		var diags diag.Diagnostics
-		if _, ok := empty.resolveScope(types.StringNull(), types.StringNull(), &diags); ok {
+		if _, ok := empty.ResolveScope(types.StringNull(), types.StringNull(), &diags); ok {
 			t.Error("expected resolution to fail without a project ID")
 		}
 		if !diags.HasError() {

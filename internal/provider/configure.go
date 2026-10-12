@@ -5,25 +5,20 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nobus-cloud/terraform-provider-nobus/internal/client"
+	"github.com/nobus-cloud/terraform-provider-nobus/internal/provider/shared"
 )
 
 // providerConfig is the resolved configuration shared with every resource. It
 // carries the API client together with the defaults applied to resources that
 // do not set project_id or availability_zone themselves.
-type providerConfig struct {
-	Client           *client.Client
-	ProjectID        string
-	AvailabilityZone string
-}
+type providerConfig = shared.Config
 
 // Configure builds the Nobus API client from the provider configuration and the
 // environment.
@@ -88,28 +83,7 @@ func (p *NobusProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	resp.ResourceData = data
 }
 
-// providerConfigFromResourceData extracts the shared configuration, reporting a
-// clear diagnostic when the provider data is not what the provider produced.
-func providerConfigFromResourceData(providerData any) (*providerConfig, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if providerData == nil {
-		// Terraform calls Configure for resources before the provider itself is
-		// configured during validation; this is not an error.
-		return nil, diags
-	}
-
-	config, ok := providerData.(*providerConfig)
-	if !ok {
-		diags.AddError(
-			"Unexpected provider data",
-			fmt.Sprintf("Expected *providerConfig, got %T. This is a bug in the provider.", providerData),
-		)
-		return nil, diags
-	}
-
-	return config, diags
-}
+var providerConfigFromResourceData = shared.FromProviderData
 
 // firstNonEmpty returns the first non-empty string.
 func firstNonEmpty(values ...string) string {

@@ -138,7 +138,7 @@ func (r *volumeAttachmentResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -190,7 +190,7 @@ func (r *volumeAttachmentResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -242,7 +242,7 @@ func (r *volumeAttachmentResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}

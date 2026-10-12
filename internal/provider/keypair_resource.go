@@ -55,7 +55,7 @@ func (r *keypairResource) Create(ctx context.Context, req resource.CreateRequest
 	if c == nil {
 		return
 	}
-	s, ok := r.config.resolveScope(p.ProjectID, p.AvailabilityZone, &resp.Diagnostics)
+	s, ok := r.config.ResolveScope(p.ProjectID, p.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -79,7 +79,7 @@ func (r *keypairResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if c == nil {
 		return
 	}
-	scope, ok := r.config.resolveScope(s.ProjectID, s.AvailabilityZone, &resp.Diagnostics)
+	scope, ok := r.config.ResolveScope(s.ProjectID, s.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -110,7 +110,7 @@ func (r *keypairResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if c == nil {
 		return
 	}
-	scope, ok := r.config.resolveScope(s.ProjectID, s.AvailabilityZone, &resp.Diagnostics)
+	scope, ok := r.config.ResolveScope(s.ProjectID, s.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}

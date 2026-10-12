@@ -22,18 +22,57 @@ A Nobus network port.
 ### Optional
 
 - `admin_state_up` (Boolean)
+- `allowed_address_pairs` (Attributes List) (see [below for nested schema](#nestedatt--allowed_address_pairs))
 - `availability_zone` (String)
+- `binding_host_id` (String)
+- `binding_profile` (Map of String)
+- `binding_vnic_type` (String)
 - `description` (String)
 - `device_id` (String)
 - `device_owner` (String)
 - `dns_name` (String)
+- `extra_dhcp_options` (Attributes List) (see [below for nested schema](#nestedatt--extra_dhcp_options))
+- `fixed_ips` (Attributes List) (see [below for nested schema](#nestedatt--fixed_ips))
 - `name` (String)
 - `port_security_enabled` (Boolean)
 - `project_id` (String)
 - `security_groups` (List of String)
+- `tags` (Set of String)
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `mac_address` (String)
 - `status` (String)
+
+<a id="nestedatt--allowed_address_pairs"></a>
+### Nested Schema for `allowed_address_pairs`
+
+Required:
+
+- `ip_address` (String)
+
+Optional:
+
+- `mac_address` (String)
+
+
+<a id="nestedatt--extra_dhcp_options"></a>
+### Nested Schema for `extra_dhcp_options`
+
+Required:
+
+- `name` (String)
+- `value` (String)
+
+
+<a id="nestedatt--fixed_ips"></a>
+### Nested Schema for `fixed_ips`
+
+Required:
+
+- `subnet_id` (String)
+
+Optional:
+
+- `ip_address` (String)

@@ -78,6 +78,7 @@ type CreateVolumeRequest struct {
 	SourceVolID      *string           `json:"source_volid,omitempty"`
 	ImageRef         *string           `json:"image_ref,omitempty"`
 	Metadata         map[string]string `json:"metadata,omitempty"`
+	Encrypted        *bool             `json:"encrypted,omitempty"`
 }
 
 // VolumeAttachment mirrors VolumeAttachmentSchema.
@@ -110,6 +111,7 @@ type Volume struct {
 	UserID           *string            `json:"user_id"`
 	SourceVolID      *string            `json:"source_volid"`
 	SnapshotID       *string            `json:"snapshot_id"`
+	Multiattach      *bool              `json:"multiattach"`
 }
 
 // UpdateVolumeRequest mirrors VolumeUpdateRequestSchema. Only name,

@@ -23,14 +23,34 @@ A standalone Nobus network subnet.
 
 ### Optional
 
+- `allocation_pools` (Attributes List) (see [below for nested schema](#nestedatt--allocation_pools))
 - `availability_zone` (String)
 - `description` (String)
 - `dns_nameservers` (List of String)
 - `enable_dhcp` (Boolean)
 - `gateway_ip` (String)
+- `host_routes` (Attributes List) (see [below for nested schema](#nestedatt--host_routes))
 - `name` (String)
 - `project_id` (String)
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `tags` (Set of String)
+
+<a id="nestedatt--allocation_pools"></a>
+### Nested Schema for `allocation_pools`
+
+Required:
+
+- `end` (String)
+- `start` (String)
+
+
+<a id="nestedatt--host_routes"></a>
+### Nested Schema for `host_routes`
+
+Required:
+
+- `destination` (String)
+- `next_hop` (String)

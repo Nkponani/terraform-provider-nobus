@@ -1,0 +1,1 @@
+terraform import nobus_fos_object.example CONTAINER_NAME/OBJECT_NAME

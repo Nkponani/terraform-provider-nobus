@@ -88,7 +88,7 @@ func (r *instanceActionResource) Create(ctx context.Context, req resource.Create
 	if c == nil {
 		return
 	}
-	s, ok := r.config.resolveScope(p.ProjectID, p.AvailabilityZone, &resp.Diagnostics)
+	s, ok := r.config.ResolveScope(p.ProjectID, p.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}

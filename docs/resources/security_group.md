@@ -24,6 +24,7 @@ A Nobus network security group.
 - `availability_zone` (String)
 - `description` (String)
 - `project_id` (String)
+- `tags` (Set of String)
 
 ### Read-Only
 

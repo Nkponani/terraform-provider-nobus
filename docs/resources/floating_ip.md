@@ -26,6 +26,7 @@ A Nobus floating IP allocation and optional port association.
 - `fixed_ip_address` (String)
 - `port_id` (String)
 - `project_id` (String)
+- `tags` (Set of String)
 
 ### Read-Only
 

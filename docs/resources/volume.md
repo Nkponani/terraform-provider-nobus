@@ -56,6 +56,7 @@ output "volume_status" {
 
 - `availability_zone` (String) Availability zone hosting the volume. Defaults to the provider `availability_zone`.
 - `description` (String) Description of the volume. Updatable in place.
+- `encrypted` (Boolean) Whether the volume is encrypted. Changing this replaces the volume.
 - `image_ref` (String) Image to create the volume from. Changing this forces a new volume.
 - `metadata` (Map of String) Metadata key/value pairs attached to the volume. Updatable in place.
 - `name` (String) Name of the volume. Updatable in place.
@@ -69,8 +70,8 @@ output "volume_status" {
 - `attachment_ids` (List of String) Attachment IDs reported by Nobus for this volume.
 - `bootable` (Boolean) Whether the volume is bootable.
 - `created_at` (String) Timestamp reported by Nobus for the volume creation.
-- `encrypted` (Boolean) Whether the volume is encrypted.
 - `id` (String) The Nobus volume ID.
+- `multiattach` (Boolean) Whether the volume may be attached to multiple instances, as reported by Nobus.
 - `server_ids` (List of String) IDs of the instances the volume is currently attached to.
 - `status` (String) Volume status reported by Nobus, for example `available` or `in-use`.
 - `updated_at` (String) Timestamp reported by Nobus for the last volume modification.

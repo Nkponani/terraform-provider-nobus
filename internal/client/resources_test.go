@@ -30,12 +30,14 @@ func TestCreateVolumeRequestMapping(t *testing.T) {
 
 	c := newTestClient(t, server)
 	name := "production-data"
+	encrypted := true
 	volume, err := c.CreateVolume(context.Background(), CreateVolumeRequest{
 		ProjectID:        "p-1",
 		AvailabilityZone: "nobus-wa-az1",
 		Size:             100,
 		Name:             &name,
 		Metadata:         map[string]string{"env": "prod"},
+		Encrypted:        &encrypted,
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume: %s", err)
@@ -55,6 +57,9 @@ func TestCreateVolumeRequestMapping(t *testing.T) {
 	}
 	if _, ok := gotBody["multiattach"]; ok {
 		t.Error("request body must not contain multiattach")
+	}
+	if gotBody["encrypted"] != true {
+		t.Errorf("encrypted = %v, want true", gotBody["encrypted"])
 	}
 
 	metadata, ok := gotBody["metadata"].(map[string]any)

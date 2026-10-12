@@ -1,0 +1,1 @@
+terraform import nobus_database.example DATABASE_ID

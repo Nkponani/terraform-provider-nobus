@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -61,6 +62,7 @@ type volumeResourceModel struct {
 	Status           types.String `tfsdk:"status"`
 	Bootable         types.Bool   `tfsdk:"bootable"`
 	Encrypted        types.Bool   `tfsdk:"encrypted"`
+	Multiattach      types.Bool   `tfsdk:"multiattach"`
 	CreatedAt        types.String `tfsdk:"created_at"`
 	UpdatedAt        types.String `tfsdk:"updated_at"`
 	AttachmentIDs    types.List   `tfsdk:"attachment_ids"`
@@ -166,7 +168,13 @@ func (r *volumeResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Computed:            true,
 			},
 			"encrypted": schema.BoolAttribute{
-				MarkdownDescription: "Whether the volume is encrypted.",
+				MarkdownDescription: "Whether the volume is encrypted. Changing this replaces the volume.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
+			},
+			"multiattach": schema.BoolAttribute{
+				MarkdownDescription: "Whether the volume may be attached to multiple instances, as reported by Nobus.",
 				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
@@ -210,7 +218,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(plan.ProjectID, plan.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -236,6 +244,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		SourceVolID:      optionalString(plan.SourceVolumeID),
 		ImageRef:         optionalString(plan.ImageRef),
 		Metadata:         metadata,
+		Encrypted:        optionalBool(plan.Encrypted),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -281,7 +290,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -322,7 +331,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -426,7 +435,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	resolved, ok := r.config.resolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
+	resolved, ok := r.config.ResolveScope(state.ProjectID, state.AvailabilityZone, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -496,6 +505,7 @@ func applyVolumeToModel(ctx context.Context, volume *client.Volume, model *volum
 	model.SourceVolumeID = stringOrNull(volume.SourceVolID)
 	model.Bootable = boolOrNull(volume.Bootable)
 	model.Encrypted = boolOrNull(volume.Encrypted)
+	model.Multiattach = boolOrNull(volume.Multiattach)
 	model.CreatedAt = stringOrNull(volume.CreatedAt)
 	model.UpdatedAt = stringOrNull(volume.UpdatedAt)
 

@@ -19,38 +19,6 @@ import (
 
 const pollInterval = 2 * time.Second
 
-// scope is the project and availability zone pair that every Nobus API
-// operation requires.
-type scope struct {
-	ProjectID        string
-	AvailabilityZone string
-}
-
-// resolveScope determines the project and availability zone for an operation,
-// falling back to the provider defaults. Values already recorded in state win
-// over provider defaults so that Read and Delete keep working if the provider
-// configuration later changes.
-func (p *providerConfig) resolveScope(projectID, availabilityZone types.String, diags *diag.Diagnostics) (scope, bool) {
-	resolvedProject := firstNonEmpty(nullSafeString(projectID), p.ProjectID)
-	resolvedZone := firstNonEmpty(
-		nullSafeString(availabilityZone),
-		p.AvailabilityZone,
-		client.DefaultAvailabilityZone,
-	)
-
-	if resolvedProject == "" {
-		diags.AddAttributeError(
-			path.Root("project_id"),
-			"Missing Nobus project ID",
-			"Every Nobus API operation requires a project ID. Set the `project_id` attribute on the resource "+
-				"or set `project_id` in the provider block.",
-		)
-		return scope{}, false
-	}
-
-	return scope{ProjectID: resolvedProject, AvailabilityZone: resolvedZone}, true
-}
-
 // requireClient reports whether the provider was configured, adding a clear
 // diagnostic when it was not.
 func requireConfigured(config *providerConfig, diags *diag.Diagnostics) *client.Client {

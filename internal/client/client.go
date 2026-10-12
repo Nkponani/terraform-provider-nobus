@@ -102,6 +102,16 @@ type Options struct {
 	// Body, when non-nil, is JSON encoded as the request body.
 	Body any
 
+	// BodyReader supplies an already encoded request body, for example a
+	// multipart upload. Body and BodyReader are mutually exclusive.
+	BodyReader io.Reader
+
+	// ContentType overrides the request content type when BodyReader is used.
+	ContentType string
+
+	// Accept overrides the default application/json response media type.
+	Accept string
+
 	// Result, when non-nil, receives the decoded response body.
 	Result any
 
@@ -141,6 +151,10 @@ func (c *Client) Do(ctx context.Context, opts Options) error {
 		endpoint.RawQuery = q.Encode()
 	}
 
+	if opts.Body != nil && opts.BodyReader != nil {
+		return fmt.Errorf("nobus: Body and BodyReader cannot both be set")
+	}
+
 	var reader io.Reader
 	if opts.Body != nil {
 		payload, err := json.Marshal(opts.Body)
@@ -148,6 +162,8 @@ func (c *Client) Do(ctx context.Context, opts Options) error {
 			return fmt.Errorf("nobus: encoding request body for %s %s: %w", method, endpoint.Path, err)
 		}
 		reader = bytes.NewReader(payload)
+	} else if opts.BodyReader != nil {
+		reader = opts.BodyReader
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, endpoint.String(), reader)
@@ -156,10 +172,16 @@ func (c *Client) Do(ctx context.Context, opts Options) error {
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Accept", "application/json")
+	accept := opts.Accept
+	if accept == "" {
+		accept = "application/json"
+	}
+	req.Header.Set("Accept", accept)
 	req.Header.Set("User-Agent", c.userAgent)
 	if opts.Body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	} else if opts.ContentType != "" {
+		req.Header.Set("Content-Type", opts.ContentType)
 	}
 
 	res, err := c.http.Do(req)

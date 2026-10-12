@@ -66,6 +66,29 @@ type InstanceVolume struct {
 	ID string `json:"id"`
 }
 
+// NIC mirrors NICSchema.
+type NIC struct {
+	NetID     *string `json:"net-id,omitempty"`
+	PortID    *string `json:"port-id,omitempty"`
+	V4FixedIP *string `json:"v4-fixed-ip,omitempty"`
+	V6FixedIP *string `json:"v6-fixed-ip,omitempty"`
+	NoFixedIP *bool   `json:"no-fixed-ip,omitempty"`
+	Tag       *string `json:"tag,omitempty"`
+}
+
+// Security mirrors SecurityGroupOut schema.
+type Security struct {
+	ID                 string         `json:"id"`
+	Name               *string        `json:"name,omitempty"`
+	Description        *string        `json:"description,omitempty"`
+	TenantID           *string        `json:"tenant_id,omitempty"`
+	ProjectID          *string        `json:"project_id,omitempty"`
+	Tags               []string       `json:"tags,omitempty"`
+	Extra              map[string]any `json:"extra,omitempty"`
+	SecurityGroupRules []any          `json:"security_group_rules,omitempty"`
+}
+
+
 // Instance mirrors InstanceSchema.
 //
 // Flavor and Image are returned as opaque objects and Addresses as an opaque
@@ -454,4 +477,226 @@ func (c *Client) WaitForVolumeAttached(
 	}
 
 	return last, nil
+}
+
+// CreateInstanceFromVolume creates an instance from an existing volume.
+// CreateInstanceFromVolumeRequest mirrors CreateInstanceFromVolumeRequestSchema.
+type CreateInstanceFromVolumeRequest struct {
+	ProjectID        string    `json:"project_id"`
+	AvailabilityZone string    `json:"availability_zone"`
+	Name             string    `json:"name"`
+	Image            string    `json:"image"`
+	Flavor           string    `json:"flavor"`
+	VolumeSize       *int64    `json:"volume_size,omitempty"`
+	NetworkID        *string   `json:"network_id,omitempty"`
+	KeyName          string    `json:"key_name"`
+	SecurityGroups   *[]string `json:"security_groups,omitempty"`
+	Nics             *[]NIC    `json:"nics,omitempty"`
+	Userdata         *string   `json:"userdata,omitempty"`
+	Tags             *[]any    `json:"tags,omitempty"`
+	VolumeID         string    `json:"volume_id"`
+}
+
+// InstanceNetworkInterface mirrors NetworkInterfaceSchema for instance interfaces.
+type InstanceNetworkInterface struct {
+	NetworkID string `json:"network_id"`
+	PortID    string `json:"port_id"`
+	MacAddr   string `json:"mac_addr"`
+}
+
+// InstanceDiagnostics mirrors ServerDiagnosticsSchema.
+type InstanceDiagnostics struct {
+	Disk     map[string]any `json:"disk"`
+	CPU      map[string]any `json:"cpu"`
+	Memory   map[string]any `json:"memory"`
+	Network  map[string]any `json:"network"`
+	General  map[string]any `json:"general"`
+	Platform map[string]any `json:"platform"`
+}
+
+// InstanceTopology mirrors TopologySchema.
+type InstanceTopology struct {
+	ID      string         `json:"id"`
+	Name    string         `json:"name"`
+	Devices map[string]any `json:"devices"`
+	Links   []map[string]any `json:"links"`
+}
+
+type instanceNetworkInterfacesResponse struct {
+	Status bool                       `json:"status"`
+	Data   []InstanceNetworkInterface `json:"data"`
+}
+
+type instanceDiagnosticsResponse struct {
+	Status bool                `json:"status"`
+	Data   InstanceDiagnostics `json:"data"`
+}
+
+type instanceSecurityGroupsResponse struct {
+	Status bool       `json:"status"`
+	Data   []Security `json:"data"`
+}
+
+type instanceTagsResponse struct {
+	Status bool     `json:"status"`
+	Data   []string `json:"data"`
+}
+
+type instanceTopologyResponse struct {
+	Status bool             `json:"status"`
+	Data   InstanceTopology `json:"data"`
+}
+
+func (c *Client) CreateInstanceFromVolume(ctx context.Context, req CreateInstanceFromVolumeRequest) (*Instance, error) {
+	if req.SecurityGroups == nil || len(*req.SecurityGroups) == 0 {
+		sg := []string{"default"}
+		req.SecurityGroups = &sg
+	}
+	if req.Nics == nil {
+		empty := []NIC{}
+		req.Nics = &empty
+	}
+
+	var out instanceResponse
+	var raw []byte
+	if err := c.Do(ctx, Options{
+		Method:  http.MethodPost,
+		Path:    "/api/v3/instance/from-volume",
+		Body:    req,
+		Result:  &out,
+		RawBody: &raw,
+	}); err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodPost, "/api/v3/instance/from-volume", out.Status, raw); err != nil {
+		return nil, err
+	}
+	if out.Data.ID == "" {
+		return nil, &StatusError{
+			Method:  http.MethodPost,
+			Path:    "/api/v3/instance/from-volume",
+			Message: "the API did not return an instance id",
+		}
+	}
+	return &out.Data, nil
+}
+
+// GetInstanceNetworkInterfaces lists network interfaces attached to an instance.
+func (c *Client) GetInstanceNetworkInterfaces(ctx context.Context, projectID, availabilityZone, serverID string) ([]InstanceNetworkInterface, error) {
+	var out instanceNetworkInterfacesResponse
+	var raw []byte
+	err := c.Do(ctx, Options{
+		Method: http.MethodGet,
+		Path:   "/api/v3/instance/network-interfaces",
+		Query: map[string]string{
+			"project_id":        projectID,
+			"availability_zone": availabilityZone,
+			"server_id":         serverID,
+		},
+		Result:  &out,
+		RawBody: &raw,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodGet, "/api/v3/instance/network-interfaces", out.Status, raw); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// GetInstanceDiagnostics retrieves server diagnostics.
+func (c *Client) GetInstanceDiagnostics(ctx context.Context, projectID, availabilityZone, serverID string) (*InstanceDiagnostics, error) {
+	var out instanceDiagnosticsResponse
+	var raw []byte
+	err := c.Do(ctx, Options{
+		Method: http.MethodGet,
+		Path:   "/api/v3/instance/diagnostics",
+		Query: map[string]string{
+			"project_id":        projectID,
+			"availability_zone": availabilityZone,
+			"server_id":         serverID,
+		},
+		Result:  &out,
+		RawBody: &raw,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodGet, "/api/v3/instance/diagnostics", out.Status, raw); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
+}
+
+// GetInstanceSecurityGroups lists security groups attached to an instance.
+func (c *Client) GetInstanceSecurityGroups(ctx context.Context, projectID, availabilityZone, serverID string) ([]Security, error) {
+	var out instanceSecurityGroupsResponse
+	var raw []byte
+	err := c.Do(ctx, Options{
+		Method: http.MethodGet,
+		Path:   "/api/v3/instance/security-groups",
+		Query: map[string]string{
+			"project_id":        projectID,
+			"availability_zone": availabilityZone,
+			"server_id":         serverID,
+		},
+		Result:  &out,
+		RawBody: &raw,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodGet, "/api/v3/instance/security-groups", out.Status, raw); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// GetInstanceTags lists tags attached to an instance.
+func (c *Client) GetInstanceTags(ctx context.Context, projectID, availabilityZone, serverID string) ([]string, error) {
+	var out instanceTagsResponse
+	var raw []byte
+	err := c.Do(ctx, Options{
+		Method: http.MethodGet,
+		Path:   "/api/v3/instance/tags",
+		Query: map[string]string{
+			"project_id":        projectID,
+			"availability_zone": availabilityZone,
+			"server_id":         serverID,
+		},
+		Result:  &out,
+		RawBody: &raw,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodGet, "/api/v3/instance/tags", out.Status, raw); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// GetInstanceTopology retrieves instance topology.
+func (c *Client) GetInstanceTopology(ctx context.Context, projectID, availabilityZone, serverID string) (*InstanceTopology, error) {
+	var out instanceTopologyResponse
+	var raw []byte
+	err := c.Do(ctx, Options{
+		Method: http.MethodGet,
+		Path:   "/api/v3/instance/topology",
+		Query: map[string]string{
+			"project_id":        projectID,
+			"availability_zone": availabilityZone,
+			"server_id":         serverID,
+		},
+		Result:  &out,
+		RawBody: &raw,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckStatus(http.MethodGet, "/api/v3/instance/topology", out.Status, raw); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
 }

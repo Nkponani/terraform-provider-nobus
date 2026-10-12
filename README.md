@@ -13,6 +13,7 @@ cloud providers.
 | Terraform resource | Purpose |
 | --- | --- |
 | `nobus_network` | A network, created together with its subnet and router |
+| `nobus_standalone_network` | A network without an automatically created subnet or router |
 | `nobus_volume` | A volume that can be grown in place |
 | `nobus_instance` | A virtual machine instance |
 | `nobus_volume_attachment` | Attaches a volume to an instance |
@@ -24,7 +25,51 @@ cloud providers.
 | `nobus_floating_ip` | A floating IP allocation and optional port association |
 | `nobus_security_group` | A network security group |
 | `nobus_security_group_rule` | A security-group ingress or egress rule |
+| `nobus_trunk` | A parent port and its VLAN subports |
+| `nobus_qos_policy` | A network QoS policy |
+| `nobus_firewall_group` | A network firewall group |
+| `nobus_port_address_pairs` | Allowed address pairs on a port |
+| `nobus_volume_snapshot` | A point-in-time volume snapshot |
+| `nobus_volume_type` | Creates a block-storage volume type (the API has no read/delete operation) |
+| `nobus_volume_transfer` | Creates a volume ownership transfer |
+| `nobus_volume_transfer_accept` | Accepts a volume ownership transfer |
 | `nobus_instance_action` | Runs a one-shot compute operation |
+| `nobus_fos_container` | A Swift-compatible FOS object-storage container |
+| `nobus_fos_object` | A local file uploaded as an object, with in-place content replacement |
+| `nobus_kubernetes_cluster` | A managed Kubernetes cluster with horizontal, vertical, and etcd-volume scaling |
+| `nobus_kubernetes_migration` | Registers an existing Kubernetes cluster without provisioning it |
+| `nobus_database` | A managed database with volume/flavor resize and password rotation |
+| `nobus_database_action` | Runs a one-shot database lifecycle action |
+| `nobus_existing_databases` | Registers existing customer-managed databases |
+| `nobus_lbaas_load_balancer` | An LBaaS load balancer and its security-group associations |
+| `nobus_lbaas_listener` | An LBaaS listener |
+| `nobus_lbaas_pool` | An LBaaS backend pool and session-persistence configuration |
+| `nobus_lbaas_member` | A backend pool member |
+| `nobus_lbaas_health_monitor` | A pool health monitor |
+| `nobus_lbaas_l7_policy` | A listener L7 policy |
+| `nobus_lbaas_l7_rule` | An L7 policy rule |
+| `nobus_lbaas_security_group_rule` | A load-balancer security-group rule |
+| `nobus_lbaas_failover` | Triggers a one-shot load-balancer failover |
+| `nobus_lbaas_provision` | Composite JSON provisioning for a load balancer and child resources |
+
+## Data sources
+
+Collection data sources are available for networks, subnets, ports, routers,
+floating IPs, security groups and rules, trunks, QoS policies, firewall groups,
+volumes, snapshots, backups, transfers, and volume availability zones. Use the
+singular `nobus_volume_backup` data source to read full details for a backup ID.
+
+FOS also provides `nobus_fos_account`, `nobus_fos_auth_details`,
+`nobus_fos_containers`, `nobus_fos_objects`, and
+`nobus_fos_object_content`. The last data source downloads an object as
+sensitive base64; its content is therefore stored in Terraform state.
+
+Managed Kubernetes data sources expose cluster lists, task status, nodes,
+bastion access, HAProxy access, and Grafana monitoring details. Managed
+database data sources expose lists, provisioning/health status, connection
+credentials, monitoring credentials, and logs. LBaaS has collection data
+sources for every child type plus task, deployment-status, status, and stats
+lookups. Credential-bearing results are marked sensitive.
 
 ## Requirements
 
@@ -133,6 +178,84 @@ resource "nobus_instance" "web" {
 }
 ```
 
+### FOS object storage
+
+```hcl
+resource "nobus_fos_container" "assets" {
+  name      = "production-assets"
+  is_public = false
+}
+
+resource "nobus_fos_object" "release" {
+  container_name = nobus_fos_container.assets.name
+  object_name    = "release.tar.gz"
+  source         = "${path.module}/release.tar.gz"
+  source_hash    = filesha256("${path.module}/release.tar.gz")
+}
+```
+
+`source_hash` is optional, but setting it to `filesha256(source)` makes
+Terraform upload the object again when the file content changes without its
+path changing.
+
+### Managed Kubernetes
+
+```hcl
+resource "nobus_kubernetes_cluster" "platform" {
+  name                = "production-k8s"
+  master_count        = 2
+  worker_count        = 3
+  master_flavor_id    = var.master_flavor_id
+  worker_flavor_id    = var.worker_flavor_id
+  image_id            = var.kubernetes_image_id
+  router_id           = nobus_router.production.id
+  etcd_volume_size_gb = 50
+}
+```
+
+Changing either node count calls horizontal scaling, changing a flavor calls
+vertical scaling, and increasing `etcd_volume_size_gb` calls the etcd-volume
+resize endpoint.
+
+### Managed database
+
+```hcl
+resource "nobus_database" "orders" {
+  name              = "orders"
+  user_email        = "dba@example.com"
+  flavor_name       = "standard"
+  database_type     = "postgresql"
+  database_version  = "16"
+  size              = 100
+  install_type      = "single"
+  customer_username = "orders_admin"
+  customer_password = var.database_password
+  zones             = ["nobus-wa-az1"]
+  encrypted         = true
+}
+```
+
+Increasing `size`, changing `flavor_id`, or changing `customer_password`
+invokes the corresponding dedicated API operation.
+
+### LBaaS
+
+```hcl
+resource "nobus_lbaas_load_balancer" "edge" {
+  name      = "production-edge"
+  flavor    = "small"
+  router_id = nobus_router.production.id
+}
+
+resource "nobus_lbaas_listener" "https" {
+  name             = "https"
+  load_balancer_id = nobus_lbaas_load_balancer.edge.id
+  protocol         = "HTTPS"
+  protocol_port    = 443
+  allow_from       = "0.0.0.0/0"
+}
+```
+
 ### Referencing a network from an instance
 
 Terraform builds the dependency graph from the reference, so the instance is
@@ -179,6 +302,11 @@ terraform import nobus_network.production NETWORK_ID
 terraform import nobus_volume.data      VOLUME_ID
 terraform import nobus_instance.web      INSTANCE_ID
 terraform import nobus_volume_attachment.database INSTANCE_ID/VOLUME_ID
+terraform import nobus_fos_container.assets CONTAINER_NAME
+terraform import nobus_fos_object.release CONTAINER_NAME/OBJECT_NAME
+terraform import nobus_kubernetes_cluster.platform CLUSTER_ID
+terraform import nobus_database.orders DATABASE_ID
+terraform import nobus_lbaas_load_balancer.edge LOAD_BALANCER_ID
 ```
 
 ## Error handling

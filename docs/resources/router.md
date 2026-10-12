@@ -24,7 +24,11 @@ A standalone Nobus network router.
 - `admin_state_up` (Boolean)
 - `availability_zone` (String)
 - `description` (String)
+- `enable_snat` (Boolean)
+- `external_fixed_ips` (List of String)
+- `external_network_id` (String)
 - `project_id` (String)
+- `tags` (Set of String)
 
 ### Read-Only
 
