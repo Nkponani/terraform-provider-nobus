@@ -88,7 +88,6 @@ type Security struct {
 	SecurityGroupRules []any          `json:"security_group_rules,omitempty"`
 }
 
-
 // Instance mirrors InstanceSchema.
 //
 // Flavor and Image are returned as opaque objects and Addresses as an opaque
@@ -516,9 +515,9 @@ type InstanceDiagnostics struct {
 
 // InstanceTopology mirrors TopologySchema.
 type InstanceTopology struct {
-	ID      string         `json:"id"`
-	Name    string         `json:"name"`
-	Devices map[string]any `json:"devices"`
+	ID      string           `json:"id"`
+	Name    string           `json:"name"`
+	Devices map[string]any   `json:"devices"`
 	Links   []map[string]any `json:"links"`
 }
 

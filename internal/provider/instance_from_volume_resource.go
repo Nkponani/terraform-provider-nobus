@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-		"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -180,7 +180,6 @@ func (r *instanceFromVolumeResource) Create(ctx context.Context, req resource.Cr
 	plan.ID = types.StringValue(inst.ID)
 	plan.ProjectID = types.StringValue(scope.ProjectID)
 	plan.AvailabilityZone = types.StringValue(scope.AvailabilityZone)
-
 
 	if !plan.SecurityGroups.IsNull() || sgPtr != nil {
 		if sgPtr == nil {
