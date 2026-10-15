@@ -78,7 +78,7 @@ type CreateVolumeRequest struct {
 	VolumeType       *string           `json:"volume_type,omitempty"`
 	SnapshotID       *string           `json:"snapshot_id,omitempty"`
 	SourceVolID      *string           `json:"source_volid,omitempty"`
-	ImageRef         *string           `json:"imageRef,omitempty"`
+	ImageRef         *string           `json:"image_ref,omitempty"`
 	Metadata         map[string]string `json:"metadata,omitempty"`
 	Encrypted        *bool             `json:"encrypted,omitempty"`
 }
