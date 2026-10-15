@@ -109,6 +109,12 @@ type Options struct {
 	// ContentType overrides the request content type when BodyReader is used.
 	ContentType string
 
+	// ContentLength sets the request Content-Length when BodyReader is used.
+	// Without it the transport falls back to chunked transfer encoding because
+	// the body length is unknown; the Nobus API does not accept chunked
+	// multipart uploads, so callers streaming a body must set this.
+	ContentLength int64
+
 	// Accept overrides the default application/json response media type.
 	Accept string
 
@@ -169,6 +175,9 @@ func (c *Client) Do(ctx context.Context, opts Options) error {
 	req, err := http.NewRequestWithContext(ctx, method, endpoint.String(), reader)
 	if err != nil {
 		return fmt.Errorf("nobus: building request for %s %s: %w", method, endpoint.Path, err)
+	}
+	if opts.ContentLength > 0 {
+		req.ContentLength = opts.ContentLength
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)

@@ -149,12 +149,12 @@ func applyTrunk(ctx context.Context, v *client.Trunk, m *trunkModel, d *diag.Dia
 	m.PortID = types.StringValue(v.PortID)
 	m.Description = shared.StringOrNull(v.Description)
 	m.Status = shared.StringOrNull(v.Status)
-	if v.SubPorts != nil {
+	if len(v.SubPorts) > 0 {
 		x, ds := trunkSubPortsValue(ctx, v.SubPorts)
 		d.Append(ds...)
 		m.SubPorts = x
 	}
-	if v.Tags != nil {
+	if len(v.Tags) > 0 {
 		x, ds := types.SetValueFrom(ctx, types.StringType, v.Tags)
 		d.Append(ds...)
 		m.Tags = x

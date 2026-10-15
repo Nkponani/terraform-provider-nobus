@@ -138,7 +138,7 @@ func TestApplyVolumeToModel(t *testing.T) {
 		Status:      &status,
 		VolumeType:  &volumeType,
 		ProjectID:   &projectID,
-		Bootable:    boolPtr(false),
+		Bootable:    flexBoolPtr(false),
 		Encrypted:   boolPtr(true),
 		Metadata:    map[string]string{"env": "prod"},
 		Attachments: []client.VolumeAttachment{{AttachmentID: stringPtr("a-1"), ServerID: stringPtr("i-1")}},
@@ -397,5 +397,7 @@ func TestDiagnosticDetailPreservesAPIMessage(t *testing.T) {
 }
 
 func boolPtr(v bool) *bool { return &v }
+
+func flexBoolPtr(v bool) *client.FlexBool { converted := client.FlexBool(v); return &converted }
 
 func stringPtr(v string) *string { return &v }

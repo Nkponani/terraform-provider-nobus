@@ -19,4 +19,5 @@ then export your credentials:
 ```bash
 export NOBUS_API_KEY="..."
 export NOBUS_PROJECT_ID="..."
+export NOBUS_AVAILABILTY_ZONE="..."
 ```

@@ -30,54 +30,57 @@ func (c *Client) UploadFOSObject(ctx context.Context, projectID, availabilityZon
 	}
 	defer func() { _ = file.Close() }()
 
-	reader, writer := io.Pipe()
-	multipartWriter := multipart.NewWriter(writer)
-	contentType := multipartWriter.FormDataContentType()
-	writeErr := make(chan error, 1)
-	go func() {
-		var streamErr error
-		defer func() {
-			if closeErr := multipartWriter.Close(); streamErr == nil {
-				streamErr = closeErr
-			}
-			if streamErr != nil {
-				_ = writer.CloseWithError(streamErr)
-			} else {
-				_ = writer.Close()
-			}
-			writeErr <- streamErr
-		}()
-
-		payloadPart, partErr := multipartWriter.CreateFormField("payload")
-		if partErr != nil {
-			streamErr = partErr
-			return
-		}
-		payload := map[string]string{"project_id": projectID, "availability_zone": availabilityZone, "container_name": containerName}
-		if partErr = json.NewEncoder(payloadPart).Encode(payload); partErr != nil {
-			streamErr = partErr
-			return
-		}
-		filePart, partErr := multipartWriter.CreateFormFile("file_data", objectName)
-		if partErr != nil {
-			streamErr = partErr
-			return
-		}
-		_, streamErr = io.Copy(filePart, file)
+	staged, err := os.CreateTemp("", "nobus-fos-upload-*")
+	if err != nil {
+		return fmt.Errorf("staging FOS object upload: %w", err)
+	}
+	defer func() {
+		_ = staged.Close()
+		_ = os.Remove(staged.Name())
 	}()
+
+	multipartWriter := multipart.NewWriter(staged)
+	contentType := multipartWriter.FormDataContentType()
+
+	payloadPart, err := multipartWriter.CreateFormField("payload")
+	if err != nil {
+		return fmt.Errorf("encoding FOS object upload: %w", err)
+	}
+	payload := map[string]string{"project_id": projectID, "availability_zone": availabilityZone, "container_name": containerName}
+	if err := json.NewEncoder(payloadPart).Encode(payload); err != nil {
+		return fmt.Errorf("encoding FOS object upload: %w", err)
+	}
+	filePart, err := multipartWriter.CreateFormFile("file_data", objectName)
+	if err != nil {
+		return fmt.Errorf("encoding FOS object upload: %w", err)
+	}
+	if _, err := io.Copy(filePart, file); err != nil {
+		return fmt.Errorf("reading FOS upload source %q: %w", sourcePath, err)
+	}
+	if err := multipartWriter.Close(); err != nil {
+		return fmt.Errorf("encoding FOS object upload: %w", err)
+	}
+
+	info, err := staged.Stat()
+	if err != nil {
+		return fmt.Errorf("sizing FOS object upload: %w", err)
+	}
+	if _, err := staged.Seek(0, io.SeekStart); err != nil {
+		return fmt.Errorf("rewinding FOS object upload: %w", err)
+	}
 
 	var raw []byte
 	var response fosMessageResponse
-	requestErr := c.Do(ctx, Options{Method: http.MethodPost, Path: fosObjectUploadPath, BodyReader: reader, ContentType: contentType, Result: &response, RawBody: &raw})
-	if requestErr != nil {
-		_ = reader.CloseWithError(requestErr)
-	}
-	streamErr := <-writeErr
-	if requestErr != nil {
-		return requestErr
-	}
-	if streamErr != nil {
-		return fmt.Errorf("encoding FOS object upload: %w", streamErr)
+	if err := c.Do(ctx, Options{
+		Method:        http.MethodPost,
+		Path:          fosObjectUploadPath,
+		BodyReader:    staged,
+		ContentLength: info.Size(),
+		ContentType:   contentType,
+		Result:        &response,
+		RawBody:       &raw,
+	}); err != nil {
+		return err
 	}
 	return checkFOSMessage(http.MethodPost, fosObjectUploadPath, response, raw)
 }

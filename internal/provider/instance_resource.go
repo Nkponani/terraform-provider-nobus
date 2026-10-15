@@ -333,6 +333,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	appliedVolumeSize := int64(DefaultInstanceVolumeSize)
+	if !plan.VolumeSize.IsNull() && !plan.VolumeSize.IsUnknown() {
+		appliedVolumeSize = plan.VolumeSize.ValueInt64()
+	}
+
 	createReq := client.CreateInstanceRequest{
 		ProjectID:        resolved.ProjectID,
 		AvailabilityZone: resolved.AvailabilityZone,
@@ -342,7 +347,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		KeyName:          plan.KeyName.ValueString(),
 		Nics:             "auto",
 		NetworkID:        optionalString(plan.NetworkID),
-		VolumeSize:       optionalInt64(plan.VolumeSize),
+		VolumeSize:       &appliedVolumeSize,
 		AdminPass:        optionalString(plan.AdminPass),
 		Userdata:         optionalString(plan.UserData),
 	}
@@ -363,24 +368,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	plan.ProjectID = types.StringValue(resolved.ProjectID)
 	plan.AvailabilityZone = types.StringValue(resolved.AvailabilityZone)
 
-	// Description and hostname are updatable but are not members of the create
-	// model, so they are applied through the documented update operation.
-	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
-		if err := apiClient.UpdateInstance(ctx, client.UpdateInstanceRequest{
-			ProjectID:        resolved.ProjectID,
-			AvailabilityZone: resolved.AvailabilityZone,
-			ServerID:         created.ID,
-			Description:      optionalString(plan.Description),
-			Hostname:         optionalString(plan.Hostname),
-		}); err != nil {
-			resp.Diagnostics.AddError(
-				fmt.Sprintf("Unable to configure Nobus instance %q", plan.Name.ValueString()),
-				diagnosticDetail(err),
-			)
-			return
-		}
-	}
-
 	// security_groups and volume_size are Optional+Computed. When the
 	// configuration omits them the plan value is unknown, and Terraform requires
 	// every value to be known after apply, so the values actually sent to the API
@@ -394,11 +381,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	appliedVolumeSize := int64(DefaultInstanceVolumeSize)
-	if !plan.VolumeSize.IsNull() && !plan.VolumeSize.IsUnknown() {
-		appliedVolumeSize = plan.VolumeSize.ValueInt64()
-	}
-	createReq.VolumeSize = &appliedVolumeSize
 	if plan.VolumeSize.IsNull() || plan.VolumeSize.IsUnknown() {
 		// Leave it null in state: the API never reports the boot volume size.
 		plan.VolumeSize = types.Int64Null()
@@ -420,6 +402,25 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	applyInstanceToModel(ctx, ready, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Description and hostname are updatable but are not members of the create
+	// model. update-server only succeeds once the instance has finished
+	// building, so they are applied after the instance reaches a ready state.
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		if err := apiClient.UpdateInstance(ctx, client.UpdateInstanceRequest{
+			ProjectID:        resolved.ProjectID,
+			AvailabilityZone: resolved.AvailabilityZone,
+			ServerID:         created.ID,
+			Description:      optionalString(plan.Description),
+			Hostname:         optionalString(plan.Hostname),
+		}); err != nil {
+			resp.Diagnostics.AddError(
+				fmt.Sprintf("Unable to configure Nobus instance %q", plan.Name.ValueString()),
+				diagnosticDetail(err),
+			)
+			return
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

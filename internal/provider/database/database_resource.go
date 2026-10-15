@@ -94,10 +94,19 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if !ok {
 		return
 	}
-	var zones []string
-	resp.Diagnostics.Append(plan.Zones.ElementsAs(ctx, &zones, false)...)
+	var zoneNames []string
+	resp.Diagnostics.Append(plan.Zones.ElementsAs(ctx, &zoneNames, false)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	zones := make([]client.Azs, 0, len(zoneNames))
+	for _, name := range zoneNames {
+		zones = append(zones, client.Azs{
+			ProjectID:        scope.ProjectID,
+			AvailabilityZone: name,
+			NoOfMasters:      1,
+			NoOfSlaves:       0,
+		})
 	}
 	encrypted := plan.Encrypted.ValueBool()
 	result, err := api.CreateDatabase(ctx, client.DatabaseCreateRequest{

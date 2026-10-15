@@ -27,20 +27,31 @@ const (
 )
 
 type DatabaseCreateRequest struct {
-	ProjectID        string   `json:"project_id"`
-	AvailabilityZone string   `json:"availability_zone"`
-	UserEmail        string   `json:"user_email"`
-	FlavorName       string   `json:"flavor_name"`
-	DatabaseName     string   `json:"database_name"`
-	DatabaseType     string   `json:"database_type"`
-	DatabaseVersion  string   `json:"database_version"`
-	DatabaseSize     int64    `json:"database_size"`
-	InstallType      string   `json:"install_type"`
-	CustomerUserName string   `json:"customer_user_name"`
-	CustomerPassword string   `json:"customer_user_password"`
-	Zones            []string `json:"zones"`
-	ZabbixID         string   `json:"zabbix_id,omitempty"`
-	Encrypted        *bool    `json:"encrypted,omitempty"`
+	ProjectID        string `json:"project_id"`
+	AvailabilityZone string `json:"availability_zone"`
+	UserEmail        string `json:"user_email"`
+	FlavorName       string `json:"flavor_name"`
+	DatabaseName     string `json:"database_name"`
+	DatabaseType     string `json:"database_type"`
+	DatabaseVersion  string `json:"database_version"`
+	DatabaseSize     int64  `json:"database_size"`
+	InstallType      string `json:"install_type"`
+	CustomerUserName string `json:"customer_user_name"`
+	CustomerPassword string `json:"customer_user_password"`
+	Zones            []Azs  `json:"zones"`
+	ZabbixID         string `json:"zabbix_id,omitempty"`
+	Encrypted        *bool  `json:"encrypted,omitempty"`
+}
+
+// Azs mirrors the Azs schema: one availability zone entry of a database
+// deployment. The API requires the zones member of a create request to be an
+// array of these objects, not a list of zone names.
+type Azs struct {
+	ProjectID        string `json:"project_id"`
+	AvailabilityZone string `json:"availability_zone"`
+	NoOfMasters      int64  `json:"no_of_masters"`
+	NoOfSlaves       int64  `json:"no_of_slaves"`
+	Origin           *bool  `json:"origin,omitempty"`
 }
 
 type Database struct {

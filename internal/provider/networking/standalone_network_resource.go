@@ -41,7 +41,7 @@ func (r *standaloneNetworkResource) Configure(_ context.Context, req resource.Co
 	r.config = c
 }
 func (r *standaloneNetworkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{MarkdownDescription: "A standalone Nobus network created without an automatic subnet or router.", Attributes: shared.MergeAttributes(shared.ScopeAttributes(), map[string]schema.Attribute{"id": schema.StringAttribute{Computed: true}, "name": schema.StringAttribute{Required: true}, "description": schema.StringAttribute{Optional: true}, "admin_state_up": schema.BoolAttribute{Optional: true, Computed: true}, "shared": schema.BoolAttribute{Optional: true, Computed: true}, "mtu": schema.Int64Attribute{Optional: true, Computed: true}, "router_external": schema.BoolAttribute{Optional: true, Computed: true}, "port_security_enabled": schema.BoolAttribute{Optional: true, Computed: true}, "tags": schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType}, "status": schema.StringAttribute{Computed: true}, "subnet_ids": schema.ListAttribute{Computed: true, ElementType: types.StringType}})}
+	resp.Schema = schema.Schema{MarkdownDescription: "A standalone Nobus network created without an automatic subnet or router.", Attributes: shared.MergeAttributes(shared.ScopeAttributes(), map[string]schema.Attribute{"id": schema.StringAttribute{Computed: true}, "name": schema.StringAttribute{Required: true}, "description": schema.StringAttribute{Optional: true}, "admin_state_up": schema.BoolAttribute{Optional: true, Computed: true}, "shared": schema.BoolAttribute{Optional: true, Computed: true}, "mtu": schema.Int64Attribute{Optional: true, Computed: true}, "router_external": schema.BoolAttribute{Optional: true, Computed: true}, "port_security_enabled": schema.BoolAttribute{Optional: true, Computed: true}, "tags": schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Tags for the network. The Nobus API rejects tags when creating a standalone network, so the values are retained in state but are not persisted on the server."}, "status": schema.StringAttribute{Computed: true}, "subnet_ids": schema.ListAttribute{Computed: true, ElementType: types.StringType}})}
 }
 func (r *standaloneNetworkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var p standaloneNetworkModel
@@ -57,14 +57,15 @@ func (r *standaloneNetworkResource) Create(ctx context.Context, req resource.Cre
 	if !ok {
 		return
 	}
-	tags, d := shared.SetToStringSlice(ctx, p.Tags)
-	resp.Diagnostics.Append(d...)
-	v, e := c.CreateStandaloneNetwork(ctx, s.ProjectID, s.AvailabilityZone, client.StandaloneNetworkCreate{Name: p.Name.ValueString(), Description: shared.OptionalString(p.Description), AdminStateUp: shared.OptionalBool(p.AdminStateUp), Shared: shared.OptionalBool(p.Shared), MTU: shared.OptionalInt64(p.MTU), RouterExternal: shared.OptionalBool(p.RouterExternal), PortSecurityEnabled: shared.OptionalBool(p.PortSecurity), Tags: tags})
+	v, e := c.CreateStandaloneNetwork(ctx, s.ProjectID, s.AvailabilityZone, client.StandaloneNetworkCreate{Name: p.Name.ValueString(), Description: shared.OptionalString(p.Description), AdminStateUp: shared.OptionalBool(p.AdminStateUp), Shared: shared.OptionalBool(p.Shared), MTU: shared.OptionalInt64(p.MTU), RouterExternal: shared.OptionalBool(p.RouterExternal), PortSecurityEnabled: shared.OptionalBool(p.PortSecurity)})
 	if e != nil {
 		resp.Diagnostics.AddError("Unable to create standalone Nobus network", shared.DiagnosticDetail(e))
 		return
 	}
 	applyStandaloneNetwork(ctx, v, &p, &resp.Diagnostics)
+	if p.Tags.IsUnknown() {
+		p.Tags = types.SetNull(types.StringType)
+	}
 	p.ProjectID = types.StringValue(s.ProjectID)
 	p.AvailabilityZone = types.StringValue(s.AvailabilityZone)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &p)...)
@@ -150,10 +151,15 @@ func applyStandaloneNetwork(ctx context.Context, v *client.Network, m *standalon
 	m.RouterExternal = shared.BoolOrNull(v.RouterExternal)
 	m.PortSecurity = shared.BoolOrNull(v.PortSecurityEnabled)
 	m.Status = shared.StringOrNull(v.Status)
-	if v.Tags != nil {
+	// The API never persists tags on a standalone network, so only adopt tags it
+	// actually reports. Writing back an empty response would drop the values
+	// retained in state and produce a perpetual diff against the configuration.
+	if len(v.Tags) > 0 {
 		x, ds := types.SetValueFrom(ctx, types.StringType, v.Tags)
 		d.Append(ds...)
 		m.Tags = x
+	} else if m.Tags.IsUnknown() {
+		m.Tags = types.SetNull(types.StringType)
 	}
 	if v.Subnets != nil {
 		x, ds := types.ListValueFrom(ctx, types.StringType, v.Subnets)

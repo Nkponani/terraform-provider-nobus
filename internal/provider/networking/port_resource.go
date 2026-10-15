@@ -10,6 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nobus-cloud/terraform-provider-nobus/internal/client"
@@ -51,7 +57,7 @@ func (r *portResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	r.config = c
 }
 func (r *portResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{MarkdownDescription: "A Nobus network port.", Attributes: shared.MergeAttributes(shared.ScopeAttributes(), map[string]schema.Attribute{"id": schema.StringAttribute{Computed: true}, "network_id": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "name": schema.StringAttribute{Optional: true}, "description": schema.StringAttribute{Optional: true}, "admin_state_up": schema.BoolAttribute{Optional: true, Computed: true}, "device_id": schema.StringAttribute{Optional: true}, "device_owner": schema.StringAttribute{Optional: true}, "security_groups": schema.ListAttribute{Optional: true, ElementType: types.StringType}, "fixed_ips": schema.ListNestedAttribute{Optional: true, Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"subnet_id": schema.StringAttribute{Required: true}, "ip_address": schema.StringAttribute{Optional: true, Computed: true}}}}, "allowed_address_pairs": schema.ListNestedAttribute{Optional: true, Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"ip_address": schema.StringAttribute{Required: true}, "mac_address": schema.StringAttribute{Optional: true, Computed: true}}}}, "binding_host_id": schema.StringAttribute{Optional: true, Computed: true}, "binding_vnic_type": schema.StringAttribute{Optional: true, Computed: true}, "binding_profile": schema.MapAttribute{Optional: true, Computed: true, ElementType: types.StringType}, "extra_dhcp_options": schema.ListNestedAttribute{Optional: true, Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"name": schema.StringAttribute{Required: true}, "value": schema.StringAttribute{Required: true}}}}, "port_security_enabled": schema.BoolAttribute{Optional: true, Computed: true}, "dns_name": schema.StringAttribute{Optional: true}, "tags": schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType}, "status": schema.StringAttribute{Computed: true}, "mac_address": schema.StringAttribute{Computed: true}})}
+	resp.Schema = schema.Schema{MarkdownDescription: "A Nobus network port.", Attributes: shared.MergeAttributes(shared.ScopeAttributes(), map[string]schema.Attribute{"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "network_id": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "name": schema.StringAttribute{Optional: true}, "description": schema.StringAttribute{Optional: true}, "admin_state_up": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}}, "device_id": schema.StringAttribute{Optional: true}, "device_owner": schema.StringAttribute{Optional: true}, "security_groups": schema.ListAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, ElementType: types.StringType}, "fixed_ips": schema.ListNestedAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"subnet_id": schema.StringAttribute{Required: true}, "ip_address": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}}}}, "allowed_address_pairs": schema.ListNestedAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"ip_address": schema.StringAttribute{Required: true}, "mac_address": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}}}}, "binding_host_id": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "binding_vnic_type": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "binding_profile": schema.MapAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()}, ElementType: types.StringType}, "extra_dhcp_options": schema.ListNestedAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"name": schema.StringAttribute{Required: true}, "value": schema.StringAttribute{Required: true}}}}, "port_security_enabled": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}}, "dns_name": schema.StringAttribute{Optional: true}, "tags": schema.SetAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()}, ElementType: types.StringType}, "status": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "mac_address": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}})}
 }
 func (r *portResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var p portModel
@@ -197,6 +203,8 @@ func applyPort(ctx context.Context, v *client.Port, m *portModel, d *diag.Diagno
 		x, ds := types.ListValueFrom(ctx, types.StringType, v.SecurityGroups)
 		d.Append(ds...)
 		m.SecurityGroups = x
+	} else if m.SecurityGroups.IsUnknown() {
+		m.SecurityGroups = types.ListNull(types.StringType)
 	}
 	if v.Tags != nil {
 		x, ds := types.SetValueFrom(ctx, types.StringType, v.Tags)
@@ -228,6 +236,8 @@ func applyPort(ctx context.Context, v *client.Port, m *portModel, d *diag.Diagno
 		x, ds := types.MapValueFrom(ctx, types.StringType, profile)
 		d.Append(ds...)
 		m.BindingProfile = x
+	} else if m.BindingProfile.IsUnknown() {
+		m.BindingProfile = types.MapNull(types.StringType)
 	}
 }
 

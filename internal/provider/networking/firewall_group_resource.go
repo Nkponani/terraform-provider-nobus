@@ -148,12 +148,12 @@ func applyFirewallGroup(ctx context.Context, v *client.FirewallGroup, m *firewal
 	m.AdminStateUp = shared.BoolOrNull(v.AdminStateUp)
 	m.IngressPolicyID = shared.StringOrNull(v.IngressFirewallPolicyID)
 	m.EgressPolicyID = shared.StringOrNull(v.EgressFirewallPolicyID)
-	if v.Ports != nil {
+	if len(v.Ports) > 0 {
 		x, ds := types.ListValueFrom(ctx, types.StringType, v.Ports)
 		d.Append(ds...)
 		m.Ports = x
 	}
-	if v.Tags != nil {
+	if len(v.Tags) > 0 {
 		x, ds := types.SetValueFrom(ctx, types.StringType, v.Tags)
 		d.Append(ds...)
 		m.Tags = x

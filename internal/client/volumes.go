@@ -4,12 +4,14 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,9 +78,54 @@ type CreateVolumeRequest struct {
 	VolumeType       *string           `json:"volume_type,omitempty"`
 	SnapshotID       *string           `json:"snapshot_id,omitempty"`
 	SourceVolID      *string           `json:"source_volid,omitempty"`
-	ImageRef         *string           `json:"image_ref,omitempty"`
+	ImageRef         *string           `json:"imageRef,omitempty"`
 	Metadata         map[string]string `json:"metadata,omitempty"`
 	Encrypted        *bool             `json:"encrypted,omitempty"`
+}
+
+// FlexBool decodes a JSON boolean that the Nobus API may serialise either as a
+// real boolean or as a string ("true"/"false"). Volume reads return bootable as
+// a string even though volume creates accept a boolean, so this type is used to
+// tolerate both encodings.
+type FlexBool bool
+
+func (b *FlexBool) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	if len(trimmed) > 0 && trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return err
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			*b = false
+			return nil
+		}
+		parsed, err := strconv.ParseBool(s)
+		if err != nil {
+			return fmt.Errorf("cannot parse %q as a boolean: %w", s, err)
+		}
+		*b = FlexBool(parsed)
+		return nil
+	}
+	var raw bool
+	if err := json.Unmarshal(trimmed, &raw); err != nil {
+		return err
+	}
+	*b = FlexBool(raw)
+	return nil
+}
+
+// BoolPtr returns the value as a *bool, or nil when the receiver is nil.
+func (b *FlexBool) BoolPtr() *bool {
+	if b == nil {
+		return nil
+	}
+	converted := bool(*b)
+	return &converted
 }
 
 // VolumeAttachment mirrors VolumeAttachmentSchema.
@@ -100,7 +147,7 @@ type Volume struct {
 	Status           *VolumeState       `json:"status"`
 	CreatedAt        *string            `json:"created_at"`
 	UpdatedAt        *string            `json:"updated_at"`
-	Bootable         *bool              `json:"bootable"`
+	Bootable         *FlexBool          `json:"bootable"`
 	Encrypted        *bool              `json:"encrypted"`
 	VolumeType       *string            `json:"volume_type"`
 	Metadata         map[string]string  `json:"metadata"`

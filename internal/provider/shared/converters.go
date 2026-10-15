@@ -143,9 +143,12 @@ func OptionalInt64(value types.Int64) *int64 {
 }
 
 // StringOrNull converts a Go string pointer into a Terraform string, mapping nil
-// onto a null value so that unset optional attributes do not produce diffs.
+// and the empty string onto a null value so that unset optional attributes do
+// not produce diffs. The API normalises unset optional strings to "" on read
+// while Terraform planned them as null, so returning "" would trigger an
+// inconsistent-result-after-apply error.
 func StringOrNull(value *string) types.String {
-	if value == nil {
+	if value == nil || *value == "" {
 		return types.StringNull()
 	}
 	return types.StringValue(*value)

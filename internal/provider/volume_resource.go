@@ -497,17 +497,35 @@ func applyVolumeToModel(ctx context.Context, volume *client.Volume, model *volum
 	}
 
 	model.ID = types.StringValue(volume.ID)
-	model.Name = stringOrNull(volume.Name)
-	model.Description = stringOrNull(volume.Description)
 	model.Size = types.Int64Value(volume.Size)
-	model.VolumeType = stringOrNull(volume.VolumeType)
-	model.SnapshotID = stringOrNull(volume.SnapshotID)
-	model.SourceVolumeID = stringOrNull(volume.SourceVolID)
-	model.Bootable = boolOrNull(volume.Bootable)
+	model.Bootable = boolOrNull(volume.Bootable.BoolPtr())
 	model.Encrypted = boolOrNull(volume.Encrypted)
 	model.Multiattach = boolOrNull(volume.Multiattach)
 	model.CreatedAt = stringOrNull(volume.CreatedAt)
 	model.UpdatedAt = stringOrNull(volume.UpdatedAt)
+
+	// The single-volume read returns only a subset of the fields the list read
+	// returns: it omits description, volume type, snapshot and source volume, and
+	// can report an empty name. When the API reports no usable value, keep the
+	// value already held by the model - the plan on create, the previous state on
+	// refresh - so a create does not look like it dropped an attribute it was
+	// given. An attribute that is still unknown is resolved to null instead,
+	// because unknown values cannot be stored in state.
+	mergeOptionalString := func(api *string, target *types.String) {
+		if api != nil && *api != "" {
+			*target = types.StringValue(*api)
+			return
+		}
+		if target.IsUnknown() {
+			*target = types.StringNull()
+		}
+	}
+
+	mergeOptionalString(volume.Name, &model.Name)
+	mergeOptionalString(volume.Description, &model.Description)
+	mergeOptionalString(volume.VolumeType, &model.VolumeType)
+	mergeOptionalString(volume.SnapshotID, &model.SnapshotID)
+	mergeOptionalString(volume.SourceVolID, &model.SourceVolumeID)
 
 	if volume.Status != nil {
 		model.Status = types.StringValue(string(*volume.Status))
@@ -522,12 +540,12 @@ func applyVolumeToModel(ctx context.Context, volume *client.Volume, model *volum
 		model.AvailabilityZone = types.StringValue(*volume.AvailabilityZone)
 	}
 
-	if volume.Metadata == nil {
-		model.Metadata = types.MapNull(types.StringType)
-	} else {
+	if volume.Metadata != nil {
 		metadata, metaDiags := types.MapValueFrom(ctx, types.StringType, volume.Metadata)
 		diags.Append(metaDiags...)
 		model.Metadata = metadata
+	} else if model.Metadata.IsUnknown() {
+		model.Metadata = types.MapNull(types.StringType)
 	}
 
 	attachmentIDs := make([]string, 0, len(volume.Attachments))

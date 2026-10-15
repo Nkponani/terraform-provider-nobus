@@ -125,7 +125,11 @@ func applyKeypair(k *client.Keypair, m *keypairResourceModel) {
 	if k.ID != nil {
 		m.ID = types.StringValue(*k.ID)
 	}
-	m.Name = stringOrNull(k.Name)
+	name := k.Name
+	if name == nil || *name == "" {
+		name = k.ID
+	}
+	m.Name = stringOrNull(name)
 	m.PublicKey = stringOrNull(k.PublicKey)
 	m.Fingerprint = stringOrNull(k.Fingerprint)
 	m.UserID = stringOrNull(k.UserID)

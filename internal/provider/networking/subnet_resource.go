@@ -9,8 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/nobus-cloud/terraform-provider-nobus/internal/client"
@@ -46,7 +50,7 @@ func (r *subnetResource) Configure(ctx context.Context, req resource.ConfigureRe
 }
 func (r *subnetResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{MarkdownDescription: "A standalone Nobus network subnet.", Attributes: shared.MergeAttributes(shared.ScopeAttributes(), map[string]schema.Attribute{
-		"id": schema.StringAttribute{Computed: true}, "network_id": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "cidr": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "ip_version": schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}}, "name": schema.StringAttribute{Optional: true}, "description": schema.StringAttribute{Optional: true}, "gateway_ip": schema.StringAttribute{Optional: true}, "enable_dhcp": schema.BoolAttribute{Optional: true}, "dns_nameservers": schema.ListAttribute{Optional: true, ElementType: types.StringType}, "host_routes": schema.ListNestedAttribute{Optional: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"destination": schema.StringAttribute{Required: true}, "next_hop": schema.StringAttribute{Required: true}}}}, "allocation_pools": schema.ListNestedAttribute{Optional: true, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"start": schema.StringAttribute{Required: true}, "end": schema.StringAttribute{Required: true}}}}, "tags": schema.SetAttribute{Computed: true, ElementType: types.StringType}})}
+		"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "network_id": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "cidr": schema.StringAttribute{Required: true, Validators: []validator.String{shared.StringNotEmpty()}, PlanModifiers: shared.ReplaceStrings()}, "ip_version": schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}}, "name": schema.StringAttribute{Optional: true}, "description": schema.StringAttribute{Optional: true}, "gateway_ip": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}, "enable_dhcp": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}}, "dns_nameservers": schema.ListAttribute{Optional: true, ElementType: types.StringType}, "host_routes": schema.ListNestedAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"destination": schema.StringAttribute{Required: true}, "next_hop": schema.StringAttribute{Required: true}}}}, "allocation_pools": schema.ListNestedAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()}, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{"start": schema.StringAttribute{Required: true}, "end": schema.StringAttribute{Required: true}}}}, "tags": schema.SetAttribute{Computed: true, PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()}, ElementType: types.StringType}})}
 }
 func (r *subnetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var p subnetModel
@@ -165,7 +169,7 @@ func applySubnet(ctx context.Context, v *client.Subnet, m *subnetModel, d *diag.
 	m.Description = shared.StringOrNull(v.Description)
 	m.GatewayIP = shared.StringOrNull(v.GatewayIP)
 	m.EnableDHCP = shared.BoolOrNull(v.EnableDHCP)
-	if v.DNSNameservers != nil {
+	if len(v.DNSNameservers) > 0 {
 		x, ds := types.ListValueFrom(ctx, types.StringType, v.DNSNameservers)
 		d.Append(ds...)
 		m.DNSNameservers = x
@@ -179,11 +183,15 @@ func applySubnet(ctx context.Context, v *client.Subnet, m *subnetModel, d *diag.
 		x, ds := hostRoutesToList(ctx, v.HostRoutes)
 		d.Append(ds...)
 		m.HostRoutes = x
+	} else if m.HostRoutes.IsUnknown() {
+		m.HostRoutes = types.ListNull(hostRouteType)
 	}
 	if v.AllocationPools != nil {
 		x, ds := allocationPoolsToList(ctx, v.AllocationPools)
 		d.Append(ds...)
 		m.AllocationPools = x
+	} else if m.AllocationPools.IsUnknown() {
+		m.AllocationPools = types.ListNull(allocationPoolType)
 	}
 }
 
