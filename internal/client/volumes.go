@@ -225,10 +225,6 @@ func (r *genericVolumeResult) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// rawData exposes the undecoded "data" member so that CheckStatus can extract
-// an error message from it.
-func (r *genericVolumeResult) rawData() json.RawMessage { return r.raw }
-
 type volumeListResponse struct {
 	Status bool     `json:"status"`
 	Data   []Volume `json:"data"`

@@ -28,7 +28,6 @@ func TestUpdatedNetworkingRequestEnvelopes(t *testing.T) {
 		}, "securitygroup_id", "security_group", securityGroupsPath},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var body map[string]any

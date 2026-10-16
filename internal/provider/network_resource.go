@@ -241,10 +241,10 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// subnet_cidr and router_name are required by the API but are not returned on
 	// read, so they are only validated when the resource is actually created.
-	if err := requireCreateValue(ctx, &resp.Diagnostics, "subnet_cidr", plan.SubnetCIDR, plan); err != nil {
+	if err := requireCreateValue(&resp.Diagnostics, "subnet_cidr", plan.SubnetCIDR); err != nil {
 		return
 	}
-	if err := requireCreateValue(ctx, &resp.Diagnostics, "router_name", plan.RouterName, plan); err != nil {
+	if err := requireCreateValue(&resp.Diagnostics, "router_name", plan.RouterName); err != nil {
 		return
 	}
 
@@ -289,7 +289,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	// When any of them are configured they are applied through the documented
 	// update operation so that the following plan stays empty.
 	if networkUpdateRequired(plan) {
-		if _, err := r.updateNetwork(ctx, projectID, availabilityZone, created.NetworkID, plan); err != nil {
+		if err := r.updateNetwork(ctx, projectID, availabilityZone, created.NetworkID, plan); err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Unable to configure Nobus network %q", plan.Name.ValueString()),
 				diagnosticDetail(err),
@@ -379,7 +379,7 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectID, availabilityZone := resolved.ProjectID, resolved.AvailabilityZone
 
 	if networkUpdateRequired(plan) {
-		if _, err := r.updateNetwork(ctx, projectID, availabilityZone, state.ID.ValueString(), plan); err != nil {
+		if err := r.updateNetwork(ctx, projectID, availabilityZone, state.ID.ValueString(), plan); err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("Unable to update Nobus network %q", state.ID.ValueString()),
 				diagnosticDetail(err),
@@ -461,7 +461,7 @@ func (r *networkResource) updateNetwork(
 	ctx context.Context,
 	projectID, availabilityZone, networkID string,
 	plan networkResourceModel,
-) (*client.Network, error) {
+) error {
 	update := client.NetworkUpdate{
 		Name:                optionalString(plan.Name),
 		Description:         optionalString(plan.Description),
@@ -475,17 +475,18 @@ func (r *networkResource) updateNetwork(
 	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
 		tags, diags := setToStringSlice(ctx, plan.Tags)
 		if diags.HasError() {
-			return nil, fmt.Errorf("reading tags: %s", diags.Errors()[0].Detail())
+			return fmt.Errorf("reading tags: %s", diags.Errors()[0].Detail())
 		}
 		update.Tags = &tags
 	}
 
-	return r.config.Client.UpdateNetwork(ctx, client.NetworkUpdateRequest{
+	_, err := r.config.Client.UpdateNetwork(ctx, client.NetworkUpdateRequest{
 		ProjectID:        projectID,
 		AvailabilityZone: availabilityZone,
 		NetworkID:        networkID,
 		Network:          update,
 	})
+	return err
 }
 
 // networkUpdateRequired reports whether any in-place updatable attribute is

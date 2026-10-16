@@ -70,6 +70,6 @@ func (c *Client) ListTrunks(ctx context.Context, p, z string) ([]Trunk, error) {
 	var d struct {
 		Items []Trunk `json:"trunks"`
 	}
-	e := c.listNetworkObjects(ctx, trunkListPath, "trunks", p, z, &d)
+	e := c.listNetworkObjects(ctx, trunkListPath, p, z, &d)
 	return d.Items, e
 }

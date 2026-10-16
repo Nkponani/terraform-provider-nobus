@@ -60,6 +60,6 @@ func (c *Client) ListSecurityGroups(ctx context.Context, p, z string) ([]Securit
 	var d struct {
 		Items []SecurityGroup `json:"security_groups"`
 	}
-	e := c.listNetworkObjects(ctx, securityGroupListPath, "security_groups", p, z, &d)
+	e := c.listNetworkObjects(ctx, securityGroupListPath, p, z, &d)
 	return d.Items, e
 }

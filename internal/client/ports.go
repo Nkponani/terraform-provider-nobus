@@ -121,6 +121,6 @@ func (c *Client) ListPorts(ctx context.Context, p, z string) ([]Port, error) {
 	var d struct {
 		Items []Port `json:"ports"`
 	}
-	e := c.listNetworkObjects(ctx, portListPath, "ports", p, z, &d)
+	e := c.listNetworkObjects(ctx, portListPath, p, z, &d)
 	return d.Items, e
 }

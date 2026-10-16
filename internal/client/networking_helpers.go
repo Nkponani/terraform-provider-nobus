@@ -37,6 +37,6 @@ func (c *Client) networkObject(ctx context.Context, method, endpoint string, que
 func updateEnvelope[T any](p, z, idKey, id, objectKey string, value T) map[string]any {
 	return map[string]any{"project_id": p, "availability_zone": z, idKey: id, objectKey: value, "exclude_none": true}
 }
-func (c *Client) listNetworkObjects(ctx context.Context, endpoint, field string, p, z string, result any) error {
+func (c *Client) listNetworkObjects(ctx context.Context, endpoint string, p, z string, result any) error {
 	return c.networkObject(ctx, http.MethodGet, endpoint, networkQuery(p, z, "", ""), nil, result)
 }

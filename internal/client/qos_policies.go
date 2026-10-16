@@ -61,6 +61,6 @@ func (c *Client) ListQosPolicies(ctx context.Context, p, z string) ([]QosPolicy,
 	var d struct {
 		Items []QosPolicy `json:"policies"`
 	}
-	e := c.listNetworkObjects(ctx, qosPolicyListPath, "policies", p, z, &d)
+	e := c.listNetworkObjects(ctx, qosPolicyListPath, p, z, &d)
 	return d.Items, e
 }

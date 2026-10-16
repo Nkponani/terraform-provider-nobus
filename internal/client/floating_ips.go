@@ -70,6 +70,6 @@ func (c *Client) ListFloatingIPs(ctx context.Context, p, z string) ([]FloatingIP
 	var d struct {
 		Items []FloatingIP `json:"floatingips"`
 	}
-	e := c.listNetworkObjects(ctx, floatingIPListPath, "floatingips", p, z, &d)
+	e := c.listNetworkObjects(ctx, floatingIPListPath, p, z, &d)
 	return d.Items, e
 }

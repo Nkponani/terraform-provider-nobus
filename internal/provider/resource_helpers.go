@@ -101,7 +101,7 @@ func mapToStringMap(ctx context.Context, m types.Map) (map[string]string, diag.D
 // Such attributes are modelled as Optional because the API never returns them,
 // so keeping them Required would force a replacement after an import. They are
 // validated here instead, at the point where they are actually needed.
-func requireCreateValue(ctx context.Context, diags *diag.Diagnostics, attribute string, value types.String, model networkResourceModel) error {
+func requireCreateValue(diags *diag.Diagnostics, attribute string, value types.String) error {
 	if nullSafeString(value) != "" {
 		return nil
 	}

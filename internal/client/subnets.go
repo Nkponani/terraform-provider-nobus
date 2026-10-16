@@ -88,6 +88,6 @@ func (c *Client) ListSubnets(ctx context.Context, p, z string) ([]Subnet, error)
 	var d struct {
 		Items []Subnet `json:"subnets"`
 	}
-	e := c.listNetworkObjects(ctx, subnetListPath, "subnets", p, z, &d)
+	e := c.listNetworkObjects(ctx, subnetListPath, p, z, &d)
 	return d.Items, e
 }

@@ -88,6 +88,6 @@ func (c *Client) ListRouters(ctx context.Context, p, z string) ([]Router, error)
 	var d struct {
 		Items []Router `json:"routers"`
 	}
-	e := c.listNetworkObjects(ctx, routerListPath, "routers", p, z, &d)
+	e := c.listNetworkObjects(ctx, routerListPath, p, z, &d)
 	return d.Items, e
 }

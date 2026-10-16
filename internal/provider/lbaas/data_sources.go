@@ -21,19 +21,6 @@ type collectionDataSource struct {
 	collection client.LBaaSCollection
 	suffix     string
 }
-type collectionDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	ProjectID        types.String `tfsdk:"project_id"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	LoadBalancerID   types.String `tfsdk:"load_balancer_id"`
-	ListenerID       types.String `tfsdk:"listener_id"`
-	PoolID           types.String `tfsdk:"pool_id"`
-	L7PolicyID       types.String `tfsdk:"l7_policy_id"`
-	Page             types.Int64  `tfsdk:"page"`
-	PageSize         types.Int64  `tfsdk:"page_size"`
-	ResultCount      types.Int64  `tfsdk:"result_count"`
-	ResultJSON       types.String `tfsdk:"result_json"`
-}
 
 func NewLoadBalancersDataSource() datasource.DataSource {
 	return &collectionDataSource{collection: client.LBaaSLoadBalancers, suffix: "load_balancers"}
@@ -151,15 +138,6 @@ type operationDataSource struct {
 	operation string
 	suffix    string
 }
-type operationDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	ProjectID        types.String `tfsdk:"project_id"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	TaskID           types.String `tfsdk:"task_id"`
-	LoadBalancerID   types.String `tfsdk:"load_balancer_id"`
-	ListenerID       types.String `tfsdk:"listener_id"`
-	ResultJSON       types.String `tfsdk:"result_json"`
-}
 
 func NewTaskDataSource() datasource.DataSource {
 	return &operationDataSource{operation: "task", suffix: "task"}
@@ -186,11 +164,12 @@ func (d *operationDataSource) Configure(_ context.Context, req datasource.Config
 }
 func (d *operationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	attributes := map[string]schema.Attribute{"id": schema.StringAttribute{Computed: true}, "project_id": schema.StringAttribute{Optional: true, Computed: true}, "availability_zone": schema.StringAttribute{Optional: true, Computed: true}, "result_json": schema.StringAttribute{Computed: true}}
-	if d.operation == "task" {
+	switch d.operation {
+	case "task":
 		attributes["task_id"] = schema.StringAttribute{Required: true}
-	} else if d.operation == "listener_stats" {
+	case "listener_stats":
 		attributes["listener_id"] = schema.StringAttribute{Required: true}
-	} else {
+	default:
 		attributes["load_balancer_id"] = schema.StringAttribute{Required: true}
 	}
 	resp.Schema = schema.Schema{MarkdownDescription: "Reads Nobus LBaaS " + d.suffix + ".", Attributes: attributes}
@@ -209,19 +188,20 @@ func (d *operationDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	query := map[string]string{}
 	identifier := ""
-	if d.operation == "task" {
+	switch d.operation {
+	case "task":
 		var value types.String
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("task_id"), &value)...)
 		identifier = value.ValueString()
 		query["task_id"] = identifier
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("task_id"), identifier)...)
-	} else if d.operation == "listener_stats" {
+	case "listener_stats":
 		var value types.String
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("listener_id"), &value)...)
 		identifier = value.ValueString()
 		query["listener_id"] = identifier
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("listener_id"), identifier)...)
-	} else {
+	default:
 		var value types.String
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("load_balancer_id"), &value)...)
 		identifier = value.ValueString()

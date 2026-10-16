@@ -29,7 +29,7 @@ A standalone Nobus network created without an automatic subnet or router.
 - `project_id` (String)
 - `router_external` (Boolean)
 - `shared` (Boolean)
-- `tags` (Set of String)
+- `tags` (Set of String) Tags for the network. The Nobus API rejects tags when creating a standalone network, so the values are retained in state but are not persisted on the server.
 
 ### Read-Only
 

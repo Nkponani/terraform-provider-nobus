@@ -145,16 +145,6 @@ type rawDataSource struct {
 	config *shared.Config
 	kind   rawKind
 }
-type rawDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	ProjectID        types.String `tfsdk:"project_id"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	DatabaseID       types.String `tfsdk:"database_id"`
-	DatabaseType     types.String `tfsdk:"database_type"`
-	LineCount        types.Int64  `tfsdk:"line_count"`
-	ReplicaCheck     types.Bool   `tfsdk:"replica_check"`
-	ResultJSON       types.String `tfsdk:"result_json"`
-}
 
 func NewCreationStatusDataSource() datasource.DataSource    { return &rawDataSource{kind: rawCreation} }
 func NewStatusDataSource() datasource.DataSource            { return &rawDataSource{kind: rawStatus} }

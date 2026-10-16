@@ -114,16 +114,6 @@ func optionalString(value types.String) *string {
 	return &converted
 }
 
-// optionalStringDefault behaves like optionalString but substitutes a default
-// for null or unknown values.
-func optionalStringDefault(value types.String, fallback string) *string {
-	if value.IsNull() || value.IsUnknown() {
-		return &fallback
-	}
-	converted := value.ValueString()
-	return &converted
-}
-
 // optionalBool converts an optional Terraform boolean into a Go pointer.
 func optionalBool(value types.Bool) *bool {
 	if value.IsNull() || value.IsUnknown() {

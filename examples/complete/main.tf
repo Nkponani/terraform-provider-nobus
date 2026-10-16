@@ -27,45 +27,45 @@ resource "nobus_security_group" "app" {
 }
 
 resource "nobus_security_group_rule" "ssh" {
-  project_id         = var.project_id
-  availability_zone  = var.availability_zone
-  security_group_id  = nobus_security_group.app.id
-  direction          = "ingress"
-  ethertype          = "IPv4"
-  protocol           = "tcp"
-  port_range_min     = 22
-  port_range_max     = 22
-  remote_ip_prefix   = "0.0.0.0/0"
+  project_id        = var.project_id
+  availability_zone = var.availability_zone
+  security_group_id = nobus_security_group.app.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "0.0.0.0/0"
 }
 
 resource "nobus_security_group_rule" "icmp" {
-  project_id         = var.project_id
-  availability_zone  = var.availability_zone
-  security_group_id  = nobus_security_group.app.id
-  direction          = "ingress"
-  ethertype          = "IPv4"
-  protocol           = "icmp"
-  remote_ip_prefix   = "0.0.0.0/0"
+  project_id        = var.project_id
+  availability_zone = var.availability_zone
+  security_group_id = nobus_security_group.app.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "icmp"
+  remote_ip_prefix  = "0.0.0.0/0"
 }
 
 resource "nobus_instance" "app" {
-  project_id        = var.project_id
-  availability_zone = var.availability_zone
-  name              = "${var.name_prefix}-vm"
-  image             = var.image
-  flavor            = var.flavor
-  key_name          = var.key_name
-  network_id        = nobus_network.app.id
-  security_groups   = [nobus_security_group.app.name]
-  volume_size       = 20
+  project_id               = var.project_id
+  availability_zone        = var.availability_zone
+  name                     = "${var.name_prefix}-vm"
+  image                    = var.image
+  flavor                   = var.flavor
+  key_name                 = var.key_name
+  network_id               = nobus_network.app.id
+  security_groups          = [nobus_security_group.app.name]
+  volume_size              = 20
   delete_volume_on_destroy = true
 }
 
 resource "nobus_floating_ip" "app" {
-  project_id           = var.project_id
-  availability_zone    = var.availability_zone
-  floating_network_id  = data.nobus_networks.all.ids[0]
-  port_id              = null
+  project_id          = var.project_id
+  availability_zone   = var.availability_zone
+  floating_network_id = data.nobus_networks.all.ids[0]
+  port_id             = null
 }
 
 resource "nobus_volume" "data" {

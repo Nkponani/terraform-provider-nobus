@@ -70,6 +70,6 @@ func (c *Client) ListFirewallGroups(ctx context.Context, p, z string) ([]Firewal
 	var d struct {
 		Items []FirewallGroup `json:"firewall_groups"`
 	}
-	e := c.listNetworkObjects(ctx, firewallGroupListPath, "firewall_groups", p, z, &d)
+	e := c.listNetworkObjects(ctx, firewallGroupListPath, p, z, &d)
 	return d.Items, e
 }

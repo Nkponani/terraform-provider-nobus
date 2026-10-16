@@ -17,7 +17,7 @@ import (
 	"github.com/nobus-cloud/terraform-provider-nobus/internal/provider/shared"
 )
 
-// volume type
+// volume type.
 type volumeTypeResource struct{ config *shared.Config }
 type volumeTypeModel struct {
 	ID               types.String `tfsdk:"id"`

@@ -99,20 +99,6 @@ type accessDataSource struct {
 	kind   accessKind
 }
 
-type accessDataSourceModel struct {
-	ID               types.String `tfsdk:"id"`
-	ProjectID        types.String `tfsdk:"project_id"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	ClusterID        types.String `tfsdk:"cluster_id"`
-	ClusterName      types.String `tfsdk:"cluster_name"`
-	IP               types.String `tfsdk:"ip"`
-	Username         types.String `tfsdk:"username"`
-	Password         types.String `tfsdk:"password"`
-	URL              types.String `tfsdk:"url"`
-	MastersJSON      types.String `tfsdk:"masters_json"`
-	WorkersJSON      types.String `tfsdk:"workers_json"`
-}
-
 func NewBastionDataSource() datasource.DataSource           { return &accessDataSource{kind: accessBastion} }
 func NewLoadBalancerLoginDataSource() datasource.DataSource { return &accessDataSource{kind: accessLB} }
 func NewMonitoringDataSource() datasource.DataSource {

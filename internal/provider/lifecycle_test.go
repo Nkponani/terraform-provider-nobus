@@ -132,10 +132,12 @@ func (f *fakeNobus) handler() http.Handler {
 		case http.MethodPut:
 			var body map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&body)
+			networkID, _ := body["network_id"].(string)
+			networkFields, _ := body["network"].(map[string]any)
 			f.mu.Lock()
-			network, ok := f.networks[body["network_id"].(string)]
+			network, ok := f.networks[networkID]
 			if ok {
-				for key, value := range body["network"].(map[string]any) {
+				for key, value := range networkFields {
 					if value != nil {
 						network[key] = value
 					}
@@ -670,14 +672,6 @@ func TestVolumeResourceLifecycle(t *testing.T) {
 	if again.Diagnostics.HasError() {
 		t.Fatalf("repeated Delete should be idempotent: %v", again.Diagnostics.Errors())
 	}
-}
-
-// routeExists reports whether the mux has a handler registered for the request
-// path. http.ServeMux has no public lookup, so a throwaway request is used.
-func routeExists(mux *http.ServeMux, r *http.Request) bool {
-	recorder := httptest.NewRecorder()
-	mux.ServeHTTP(recorder, r)
-	return recorder.Code != http.StatusNotFound
 }
 
 // mustMap builds a Terraform map value or fails the test.

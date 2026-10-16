@@ -57,7 +57,7 @@ func TestProviderSchema(t *testing.T) {
 	if _, ok := providerAttributes["request_timeout"]; ok {
 		t.Error("provider must not expose request_timeout")
 	}
-	if provider.Block.BlockTypes != nil && len(provider.Block.BlockTypes) > 0 {
+	if len(provider.Block.BlockTypes) > 0 {
 		t.Error("the provider schema must not expose nested blocks")
 	}
 }

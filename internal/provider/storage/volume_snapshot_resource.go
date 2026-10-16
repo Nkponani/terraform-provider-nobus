@@ -17,7 +17,7 @@ import (
 	"github.com/nobus-cloud/terraform-provider-nobus/internal/provider/shared"
 )
 
-// volume snapshot
+// volume snapshot.
 type volumeSnapshotResource struct{ config *shared.Config }
 type volumeSnapshotModel struct {
 	ID               types.String `tfsdk:"id"`
