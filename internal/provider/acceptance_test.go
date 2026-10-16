@@ -52,13 +52,13 @@ func testAccPreCheckInstance(t *testing.T) {
 	testAccPreCheck(t)
 
 	if os.Getenv("NOBUS_TEST_IMAGE") == "" {
-		t.Fatal("NOBUS_TEST_IMAGE must be set for the instance acceptance tests")
+		t.Skip("NOBUS_TEST_IMAGE must be set for the instance acceptance tests")
 	}
 	if os.Getenv("NOBUS_TEST_FLAVOR") == "" {
-		t.Fatal("NOBUS_TEST_FLAVOR must be set for the instance acceptance tests")
+		t.Skip("NOBUS_TEST_FLAVOR must be set for the instance acceptance tests")
 	}
 	if os.Getenv("NOBUS_TEST_KEY_NAME") == "" {
-		t.Fatal("NOBUS_TEST_KEY_NAME must be set for the instance acceptance tests")
+		t.Skip("NOBUS_TEST_KEY_NAME must be set for the instance acceptance tests")
 	}
 }
 
