@@ -313,3 +313,144 @@ func TestListNetworksPagination(t *testing.T) {
 		t.Errorf("marker = %v, want [marker-1]", got)
 	}
 }
+
+// TestGetVolumeDecodesArrayShape verifies that a read by id tolerates the
+// array envelope the API returns for freshly created volumes.
+func TestGetVolumeDecodesArrayShape(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":true,"data":[{"id":"v-1","size":1,"status":"available","name":"race-probe"}]}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	volume, err := c.GetVolume(context.Background(), "p-1", "az-1", "v-1")
+	if err != nil {
+		t.Fatalf("GetVolume: %s", err)
+	}
+	if volume.ID != "v-1" {
+		t.Errorf("id = %q, want v-1", volume.ID)
+	}
+	if volume.Status == nil || *volume.Status != VolumeStateAvailable {
+		t.Errorf("status = %v, want available", volume.Status)
+	}
+}
+
+// TestGetVolumeDecodesObjectShape verifies the settled object envelope keeps
+// decoding after the array-tolerant change.
+func TestGetVolumeDecodesObjectShape(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":true,"data":{"id":"v-1","size":1,"status":"available"}}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	volume, err := c.GetVolume(context.Background(), "p-1", "az-1", "v-1")
+	if err != nil {
+		t.Fatalf("GetVolume: %s", err)
+	}
+	if volume.ID != "v-1" {
+		t.Errorf("id = %q, want v-1", volume.ID)
+	}
+}
+
+// TestGetVolumeEmptyArrayReportsMissing verifies that an empty data array
+// reports a missing volume rather than decoding a bogus record.
+func TestGetVolumeEmptyArrayReportsMissing(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":true,"data":[]}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	volume, err := c.GetVolume(context.Background(), "p-1", "az-1", "v-1")
+	if err == nil {
+		t.Fatal("expected an error when data is an empty array")
+	}
+	if volume != nil {
+		t.Errorf("volume = %+v, want nil", volume)
+	}
+}
+
+// TestWaitForVolumeReadyAcceptsArrayShape verifies readiness polling survives
+// the array envelope returned right after a create.
+func TestWaitForVolumeReadyAcceptsArrayShape(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":true,"data":[{"id":"v-1","size":1,"status":"available"}]}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	volume, err := c.WaitForVolumeReady(context.Background(), "p-1", "az-1", "v-1", nil, time.Millisecond)
+	if err != nil {
+		t.Fatalf("WaitForVolumeReady: %s", err)
+	}
+	if volume.ID != "v-1" {
+		t.Errorf("id = %q, want v-1", volume.ID)
+	}
+}
+
+// TestWaitForVolumeDeletedAcceptsArrayThenMissing verifies that the delete
+// wait keeps polling through the array envelope and finishes on a 404.
+func TestWaitForVolumeDeletedAcceptsArrayThenMissing(t *testing.T) {
+	t.Parallel()
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if atomic.AddInt32(&calls, 1) == 1 {
+			_, _ = w.Write([]byte(`{"status":true,"data":[{"id":"v-1","status":"available"}]}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"Unable to Get volume: Volume v-1 could not be found. (HTTP 404)"}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	if err := c.WaitForVolumeDeleted(context.Background(), "p-1", "az-1", "v-1", time.Millisecond); err != nil {
+		t.Fatalf("WaitForVolumeDeleted: %s", err)
+	}
+	if atomic.LoadInt32(&calls) < 2 {
+		t.Errorf("expected at least 2 polls, got %d", calls)
+	}
+}
+
+// TestWaitForVolumeDeletedFailsFastOnDeletingError verifies that a terminal
+// error_deleting state aborts the wait immediately instead of polling until
+// the context deadline.
+func TestWaitForVolumeDeletedFailsFastOnDeletingError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":true,"data":{"id":"v-1","status":"error_deleting"}}`))
+	}))
+	defer server.Close()
+
+	c := newTestClient(t, server)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := c.WaitForVolumeDeleted(ctx, "p-1", "az-1", "v-1", time.Millisecond)
+	if err == nil {
+		t.Fatal("expected an error when the volume is stuck in error_deleting")
+	}
+	if !strings.Contains(err.Error(), "error_deleting") {
+		t.Errorf("error should name the state, got: %s", err)
+	}
+	if !strings.Contains(err.Error(), "v-1") {
+		t.Errorf("error should name the volume id, got: %s", err)
+	}
+}

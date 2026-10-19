@@ -218,9 +218,17 @@ func (r *genericVolumeResult) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	// The API answers a read by id with a single object once the record has
+	// settled, but wraps the same volume in a one-element array while it is
+	// fresh from a create, so accept both shapes.
 	var single Volume
 	if err := json.Unmarshal(envelope.Data, &single); err == nil && single.ID != "" {
 		r.Volume = &single
+		return nil
+	}
+	var many []Volume
+	if err := json.Unmarshal(envelope.Data, &many); err == nil && len(many) > 0 {
+		r.Volume = &many[0]
 	}
 	return nil
 }
@@ -487,6 +495,14 @@ func (c *Client) WaitForVolumeDeleted(
 		}
 		if volume == nil {
 			return true, nil
+		}
+		// A delete that failed server-side never resolves on its own, so report
+		// the terminal state instead of polling until the context deadline.
+		if volume.Status != nil && volumeFailureStates[*volume.Status] {
+			return false, fmt.Errorf(
+				"nobus: volume %q entered the %q state while waiting for deletion",
+				volumeID, *volume.Status,
+			)
 		}
 		return false, nil
 	})
