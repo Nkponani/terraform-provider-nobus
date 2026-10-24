@@ -8,6 +8,13 @@ derived from the Nobus OpenAPI specification, which is vendored at
 [`docs/api/openapi.json`](docs/api/openapi.json). Nothing is inferred from other
 cloud providers.
 
+## Documentation
+
+The generated Terraform reference in [`docs/`](docs/) is the complete schema
+reference. For task-oriented setup, lifecycle behavior, service architecture,
+operational guidance, imports, secrets, and troubleshooting, start with the
+[full provider guide](docs-extra/README.md).
+
 ## Resources
 
 | Terraform resource | Purpose |
