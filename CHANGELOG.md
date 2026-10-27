@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.2] - 2026-10-27
+
 ### Added
 - Comprehensive architecture documentation (`ARCHITECTURE.md`)
 - Contribution guidelines (`CONTRIBUTING.md`)
@@ -15,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated documentation structure for better maintainability
 - CHANGELOG.md reformatted to standard Keep a Changelog format
+- Generated resource and data source docs now use the provider type name in page titles
+
+### Fixed
+- `nobus_database` now reads the `encrypted` attribute back during refresh and import, so an imported encrypted database is no longer planned for replacement
 
 ## [v0.1.0] - 2026-10-20
 
