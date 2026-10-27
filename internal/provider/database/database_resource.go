@@ -170,6 +170,11 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if installType != "" {
 		state.InstallType = types.StringValue(installType)
 	}
+	// Keep the prior value when the API omits encryption rather than assuming
+	// it is disabled; imported state depends on reading the real value back.
+	if value.Encrypted != nil {
+		state.Encrypted = types.BoolValue(*value.Encrypted)
+	}
 	state.Status, state.CreatedAt = stringOrNull(value.Status), stringOrNull(value.CreatedAt)
 	state.InstanceCount = types.Int64Value(value.InstanceCount)
 	state.InstancesJSON = rawOrNull(value.Instances)

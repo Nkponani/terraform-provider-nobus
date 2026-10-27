@@ -67,6 +67,7 @@ type Database struct {
 	InstanceCount    int64           `json:"instance_count"`
 	MasterCount      int64           `json:"number_of_masters"`
 	SlaveCount       int64           `json:"number_of_slaves"`
+	Encrypted        *bool           `json:"encrypted"`
 	Instances        json.RawMessage `json:"instances"`
 }
 
