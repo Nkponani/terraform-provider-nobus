@@ -71,6 +71,16 @@ func (r *actionResource) Read(context.Context, resource.ReadRequest, *resource.R
 func (r *actionResource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {}
 func (r *actionResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {}
 
+// ImportState rejects imports because database actions are one-shot operations
+// that produce no durable, readable state.
+func (r *actionResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus database actions",
+		"Database actions are one-shot operations, not durable resources, so they cannot be imported. "+
+			"Create a new nobus_database_action resource to run an action against a database.",
+	)
+}
+
 type existingResource struct{ config *shared.Config }
 type existingResourceModel struct {
 	ID          types.String `tfsdk:"id"`
@@ -122,5 +132,17 @@ func (r *existingResource) Update(context.Context, resource.UpdateRequest, *reso
 func (r *existingResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
 }
 
+// ImportState rejects imports because the existing-databases resource is a
+// one-shot inventory registration with no read endpoint to refresh state from.
+func (r *existingResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus existing databases",
+		"Registering existing databases is a one-shot inventory operation, not a durable resource, so it cannot be imported. "+
+			"Create a new nobus_existing_databases resource to register existing databases.",
+	)
+}
+
 var _ resource.ResourceWithConfigure = &actionResource{}
+var _ resource.ResourceWithImportState = &actionResource{}
 var _ resource.ResourceWithConfigure = &existingResource{}
+var _ resource.ResourceWithImportState = &existingResource{}

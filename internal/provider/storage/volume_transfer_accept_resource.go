@@ -78,4 +78,15 @@ func (r *volumeTransferAcceptResource) Update(context.Context, resource.UpdateRe
 func (r *volumeTransferAcceptResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
 }
 
+// ImportState rejects imports because accepting a volume transfer is a
+// one-shot action, not a durable, readable resource.
+func (r *volumeTransferAcceptResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus volume transfer accept",
+		"Accepting a volume transfer is a one-shot action, not a durable resource, so it cannot be imported. "+
+			"Create a new nobus_volume_transfer_accept resource to accept a pending transfer.",
+	)
+}
+
 var _ resource.ResourceWithConfigure = &volumeTransferAcceptResource{}
+var _ resource.ResourceWithImportState = &volumeTransferAcceptResource{}

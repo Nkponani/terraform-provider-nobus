@@ -79,6 +79,20 @@ func (r *volumeTypeResource) Update(_ context.Context, _ resource.UpdateRequest,
 }
 func (r *volumeTypeResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
 }
+
+// ImportState rejects imports because the live Nobus API exposes only creation
+// for volume types; there is no read endpoint to refresh state from.
+func (r *volumeTypeResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus volume types",
+		"The Nobus API does not expose a volume type read endpoint, so an existing volume type cannot be imported. "+
+			"Create a new volume type resource instead.",
+	)
+}
+
+var _ resource.ResourceWithConfigure = &volumeTypeResource{}
+var _ resource.ResourceWithImportState = &volumeTypeResource{}
+
 func applyVolumeType(ctx context.Context, v *client.VolumeType, m *volumeTypeModel, d *diag.Diagnostics) {
 	m.ID = types.StringValue(v.ID)
 	m.Name = types.StringValue(v.Name)
@@ -90,5 +104,3 @@ func applyVolumeType(ctx context.Context, v *client.VolumeType, m *volumeTypeMod
 		m.ExtraSpecs = x
 	}
 }
-
-var _ resource.ResourceWithConfigure = &volumeTypeResource{}

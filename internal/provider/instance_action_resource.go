@@ -153,5 +153,16 @@ func (r *instanceActionResource) Update(ctx context.Context, req resource.Update
 func (r *instanceActionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 }
 
+// ImportState rejects imports because instance actions are one-shot
+// operations that produce no durable, readable state.
+func (r *instanceActionResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus instance actions",
+		"Instance actions are one-shot operations, not durable resources, so they cannot be imported. "+
+			"Create a new nobus_instance_action resource to run an operation against an instance.",
+	)
+}
+
 var _ resource.Resource = &instanceActionResource{}
 var _ resource.ResourceWithConfigure = &instanceActionResource{}
+var _ resource.ResourceWithImportState = &instanceActionResource{}

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `ImportState` support for `nobus_instance_from_volume`, so an existing instance can be adopted with `terraform import`
+- `ImportState` implementations (returning a clear diagnostic) for the one-shot and create-only resources that have no durable remote object to import: `nobus_volume_type`, `nobus_volume_transfer_accept`, `nobus_kubernetes_migration`, `nobus_instance_action`, `nobus_database_action`, `nobus_existing_databases`, `nobus_lbaas_security_group_rule`, `nobus_lbaas_failover`, and `nobus_lbaas_provision`
+
+### Changed
+- Generated resource docs now document import support for every importable resource
+
 ## [v0.1.2] - 2026-10-27
 
 ### Added

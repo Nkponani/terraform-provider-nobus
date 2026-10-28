@@ -5,7 +5,9 @@ package provider
 
 import (
 	"context"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -279,3 +281,21 @@ func (r *instanceFromVolumeResource) Delete(ctx context.Context, req resource.De
 		}
 	}
 }
+
+// ImportState imports an existing instance by its Nobus instance ID. The
+// project and availability zone are taken from the provider configuration
+// because every Nobus read requires them.
+func (r *instanceFromVolumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if strings.TrimSpace(req.ID) == "" {
+		resp.Diagnostics.AddError(
+			"Invalid import identifier",
+			"Importing a Nobus instance requires the instance ID, for example:\n"+
+				"  terraform import nobus_instance_from_volume.web INSTANCE_ID",
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+}
+
+var _ resource.ResourceWithImportState = &instanceFromVolumeResource{}

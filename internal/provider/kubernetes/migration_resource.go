@@ -71,4 +71,15 @@ func (r *migrationResource) Update(context.Context, resource.UpdateRequest, *res
 func (r *migrationResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
 }
 
+// ImportState rejects imports because the migration resource is a one-shot
+// backfill operation with no read endpoint to refresh state from.
+func (r *migrationResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus Kubernetes migration",
+		"Migration is a one-shot inventory backfill operation, not a durable resource, so it cannot be imported. "+
+			"Create a new nobus_kubernetes_migration resource to backfill an existing cluster.",
+	)
+}
+
 var _ resource.ResourceWithConfigure = &migrationResource{}
+var _ resource.ResourceWithImportState = &migrationResource{}

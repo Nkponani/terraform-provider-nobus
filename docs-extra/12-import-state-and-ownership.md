@@ -17,7 +17,7 @@ terraform import nobus_security_group.web SECURITY_GROUP_ID
 terraform plan
 ```
 
-Use the normal remote ID for most importable long-lived resources: networks, standalone networks, subnets, routers, ports, floating IPs, security groups/rules, trunks, QoS policies, firewall groups, volumes, snapshots, transfers, FOS containers/objects, instances, keypairs, Kubernetes clusters, databases, and the ordinary LBaaS hierarchy.
+Use the normal remote ID for most importable long-lived resources: networks, standalone networks, subnets, routers, ports, floating IPs, security groups/rules, trunks, QoS policies, firewall groups, volumes, snapshots, transfers, FOS containers/objects, instances, instances from volume, keypairs, Kubernetes clusters, databases, and the ordinary LBaaS hierarchy (load balancers, listeners, pools, members, health monitors, L7 policies/rules).
 
 ## Composite import identifiers
 

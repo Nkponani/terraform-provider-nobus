@@ -81,6 +81,16 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	}
 }
 
+// ImportState rejects imports because the LBaaS security-group rule endpoint
+// only supports creation and deletion; there is no read to refresh state.
+func (r *securityGroupRuleResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus LBaaS security-group rules",
+		"The Nobus API does not expose a security-group rule read endpoint, so an existing rule cannot be imported. "+
+			"Create a new nobus_lbaas_security_group_rule resource instead.",
+	)
+}
+
 type failoverResource struct{ config *shared.Config }
 type failoverResourceModel struct {
 	ID               types.String `tfsdk:"id"`
@@ -125,6 +135,16 @@ func (r *failoverResource) Read(context.Context, resource.ReadRequest, *resource
 func (r *failoverResource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {
 }
 func (r *failoverResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
+}
+
+// ImportState rejects imports because failover is a one-shot operation that
+// produces no durable, readable state.
+func (r *failoverResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus LBaaS failover",
+		"Failover is a one-shot operation, not a durable resource, so it cannot be imported. "+
+			"Create a new nobus_lbaas_failover resource to trigger a failover.",
+	)
 }
 
 type provisionResource struct{ config *shared.Config }
@@ -199,6 +219,21 @@ func (r *provisionResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 }
 
+// ImportState rejects imports because the provision resource is a one-shot
+// provisioning operation with no read endpoint to refresh state from.
+func (r *provisionResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.AddError(
+		"Import is not supported for Nobus LBaaS provision",
+		"Provisioning is a one-shot operation that produces a load balancer stack, not a readable resource. "+
+			"Create a new nobus_lbaas_provision resource, or manage the individual load balancer, listener, and pool resources directly.",
+	)
+}
+
 var _ resource.ResourceWithConfigure = &securityGroupRuleResource{}
+var _ resource.ResourceWithImportState = &securityGroupRuleResource{}
+
 var _ resource.ResourceWithConfigure = &failoverResource{}
+var _ resource.ResourceWithImportState = &failoverResource{}
+
 var _ resource.ResourceWithConfigure = &provisionResource{}
+var _ resource.ResourceWithImportState = &provisionResource{}
